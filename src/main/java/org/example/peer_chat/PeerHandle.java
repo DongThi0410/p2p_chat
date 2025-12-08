@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+
 public class PeerHandle {
     private final String name;
     private final ServerSocket serverSocket;
@@ -25,6 +26,8 @@ public class PeerHandle {
     private final Map<String, String> cachedPeers = new ConcurrentHashMap<>();
 
     private MessageListener listener;
+    private volatile boolean inCall = false;
+    private volatile String currentCallPeer = null;
 
     public PeerHandle(String name, ChatDb db) throws IOException, LineUnavailableException {
         this.name = name;
@@ -60,10 +63,17 @@ public class PeerHandle {
         }
     }
 
-    public String getName() { return name; }
-    public int getListenPort() { return listenPort; }
+    public String getName() {
+        return name;
+    }
 
-    public void setListener(MessageListener listener) { this.listener = listener; }
+    public int getListenPort() {
+        return listenPort;
+    }
+
+    public void setListener(MessageListener listener) {
+        this.listener = listener;
+    }
 
     public List<String> getPeerList() {
         return cachedPeers.keySet().stream().sorted().collect(Collectors.toList());
@@ -97,8 +107,20 @@ public class PeerHandle {
 
     // start a call: send request to target; when accept received, both sides will start voiceEngine
     public void startVoiceCall(String peerName) {
+        if (inCall) {
+            System.out.println("[Call] Already in call");
+            return;
+        }
+
         String addr = lookup(peerName);
-        if (addr == null) { System.out.println("[Call] Peer not found"); return; }
+        if (addr == null) {
+            System.out.println("[Call] Peer not found");
+            return;
+        }
+
+        currentCallPeer = peerName;
+        inCall = true;
+        if (listener != null) listener.onCallStarted(peerName);
 
         // addr = ip:tcpPort
         // send CALL_REQUEST|callerName|callerIp|callerVoicePort
@@ -110,7 +132,12 @@ public class PeerHandle {
 
     // called when user accepts an incoming CALL_REQUEST
     public void acceptCall(String callerName, String callerIp, int callerVoicePort) {
-        // send CALL_ACCEPT back to caller so caller can start engine
+
+        if (inCall) return;
+        currentCallPeer = callerName;
+        inCall = true;
+        if (listener != null) listener.onCallEnded(callerName);
+
         String addr = lookup(callerName);
         if (addr != null) {
             String myIp = getLocalAddress();
@@ -122,8 +149,13 @@ public class PeerHandle {
         System.out.println("[Call] accepted and started voice with " + callerName);
     }
 
+
     public void stopVoiceCall() {
+        if (!inCall) return;
         voiceEngine.stop();
+        if (listener != null && currentCallPeer != null) listener.onCallEnded(currentCallPeer);
+        currentCallPeer = null;
+        inCall = false;
     }
 
     // parse incoming messages; we use special prefixes for signaling
@@ -168,7 +200,10 @@ public class PeerHandle {
     public void shutdown() {
         discovery.stop();
         messageHandler.stop();
-        try { serverSocket.close(); } catch (IOException ignored) {}
+        try {
+            serverSocket.close();
+        } catch (IOException ignored) {
+        }
         voiceEngine.stop();
     }
 

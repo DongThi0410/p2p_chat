@@ -29,6 +29,9 @@ public class App extends Application {
     private TextField msgField;
     private ScrollPane scrollPane;
     private ListView<String> peerListView;
+    Label callStatusLabel = new Label();
+    private Button callBtn;
+    private Button hangBtn;
 
     ChatDb db = new ChatDb("chat_history.db");
 
@@ -79,6 +82,23 @@ public class App extends Application {
                 @Override
                 public void onIncomingCall(String callerName, String callerIp, int callerVoicePort) {
                     Platform.runLater(() -> showIncomingCallPopup(callerName, callerIp, callerVoicePort));
+                }
+                @Override
+                public void onCallStarted(String peerName) {
+                    Platform.runLater(() -> {
+                        callStatusLabel.setText("📞 In call with " + peerName);
+                        callBtn.setDisable(true);
+                        hangBtn.setDisable(false);
+                    });
+                }
+
+                @Override
+                public void onCallEnded(String peerName) {
+                    Platform.runLater(() -> {
+                        callStatusLabel.setText("");
+                        callBtn.setDisable(false);
+                        hangBtn.setDisable(true);
+                    });
                 }
             });
 
