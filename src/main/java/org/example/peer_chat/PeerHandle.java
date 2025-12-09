@@ -136,7 +136,7 @@ public class PeerHandle {
         if (inCall) return;
         currentCallPeer = callerName;
         inCall = true;
-        if (listener != null) listener.onCallEnded(callerName);
+        if (listener != null) listener.onCallStarted(callerName);
 
         String addr = lookup(callerName);
         if (addr != null) {
@@ -153,12 +153,17 @@ public class PeerHandle {
     public void stopVoiceCall() {
         if (!inCall) return;
         voiceEngine.stop();
+        if (currentCallPeer != null) {
+            String addr = lookup(currentCallPeer);
+            if (addr != null) {
+                messageHandler.sendText(addr, "CALL_END|" + name);
+            }
+        }
         if (listener != null && currentCallPeer != null) listener.onCallEnded(currentCallPeer);
-        currentCallPeer = null;
         inCall = false;
+        currentCallPeer = null;
     }
 
-    // parse incoming messages; we use special prefixes for signaling
     private void onIncomingMessage(String sender, String message) {
         // signaling: CALL_REQUEST|caller|ip|voicePort
         if (message != null && message.startsWith("CALL_REQUEST|")) {
@@ -185,6 +190,18 @@ public class PeerHandle {
                 System.out.println("[Call] remote accepted. starting voice to " + accepter + "@" + ip + ":" + voicePort);
                 return;
             }
+        }
+        if (message != null && message.startsWith("CALL_END|")) {
+            String[] p = message.split("\\|");
+            String ender = p[1];
+
+            voiceEngine.stop();
+            inCall = false;
+
+            if (listener != null)
+                listener.onCallEnded(ender);
+
+            return;
         }
 
         // normal chat message

@@ -31,11 +31,12 @@ public class App extends Application {
     private ListView<String> peerListView;
     Label callStatusLabel = new Label();
     private Button callBtn;
-    private Button hangBtn;
-
+    private Stage callModal;
     ChatDb db = new ChatDb("chat_history.db");
 
-    public static void main(String[] args) { launch(args); }
+    public static void main(String[] args) {
+        launch(args);
+    }
 
     @Override
     public void start(Stage stage) {
@@ -58,7 +59,10 @@ public class App extends Application {
 
         login.setOnAction(e -> {
             String n = nameField.getText().trim();
-            if (n.isEmpty()) { status.setText("Enter name"); return; }
+            if (n.isEmpty()) {
+                status.setText("Enter name");
+                return;
+            }
             try {
                 peer = new PeerHandle(n, db);
             } catch (IOException | LineUnavailableException ex) {
@@ -67,7 +71,6 @@ public class App extends Application {
                 return;
             }
             myName = n;
-
             peer.setListener(new MessageListener() {
                 @Override
                 public void onMessage(String sender, String msg) {
@@ -83,25 +86,32 @@ public class App extends Application {
                 public void onIncomingCall(String callerName, String callerIp, int callerVoicePort) {
                     Platform.runLater(() -> showIncomingCallPopup(callerName, callerIp, callerVoicePort));
                 }
+
                 @Override
                 public void onCallStarted(String peerName) {
                     Platform.runLater(() -> {
                         callStatusLabel.setText("📞 In call with " + peerName);
                         callBtn.setDisable(true);
-                        hangBtn.setDisable(false);
+
+                        showCallModal(peerName);       // <<< THÊM VÀO
                     });
                 }
 
                 @Override
                 public void onCallEnded(String peerName) {
                     Platform.runLater(() -> {
+                        if (callModal != null) {
+                            callModal.close();
+                            callModal = null;
+                        }
                         callStatusLabel.setText("");
                         callBtn.setDisable(false);
-                        hangBtn.setDisable(true);
+
+                        showCallEndedPopup(peerName);
+
                     });
                 }
             });
-
             showChatScreen(stage);
         });
 
@@ -148,21 +158,19 @@ public class App extends Application {
         Button fileBtn = new Button("Send File");
         fileBtn.setOnAction(e -> sendFile());
 
-        Button callBtn = new Button("Call");
+        callBtn = new Button("Call");
         callBtn.setOnAction(e -> {
             String t = peerListView.getSelectionModel().getSelectedItem();
             if (t == null) appendMessage("[Error] select peer");
             else peer.startVoiceCall(t);
         });
 
-        Button hang = new Button("Hangup");
-        hang.setOnAction(e -> peer.stopVoiceCall());
 
         Button refresh = new Button("Refresh");
         refresh.setOnAction(this::refreshPeerList);
 
-        bottom.getChildren().addAll(msgField, sendBtn, fileBtn, callBtn, hang, refresh);
         root.setBottom(bottom);
+        bottom.getChildren().addAll(msgField, sendBtn, fileBtn, callBtn, refresh);
 
         // selection loads history
         peerListView.getSelectionModel().selectedItemProperty().addListener((obs, oldV, newV) -> {
@@ -202,7 +210,10 @@ public class App extends Application {
 
     private void sendFile() {
         String target = peerListView.getSelectionModel().getSelectedItem();
-        if (target == null) { appendMessage("[Error] select peer"); return; }
+        if (target == null) {
+            appendMessage("[Error] select peer");
+            return;
+        }
 
         FileChooser chooser = new FileChooser();
         File f = chooser.showOpenDialog(null);
@@ -225,8 +236,11 @@ public class App extends Application {
                     if (m.isFile()) {
                         Hyperlink link = new Hyperlink(m.getFilePath());
                         link.setOnAction(ev -> {
-                            try { java.awt.Desktop.getDesktop().open(new File(m.getFilePath())); }
-                            catch (Exception ex) { ex.printStackTrace(); }
+                            try {
+                                java.awt.Desktop.getDesktop().open(new File(m.getFilePath()));
+                            } catch (Exception ex) {
+                                ex.printStackTrace();
+                            }
                         });
                         HBox row = new HBox(6, new Label(s + ":"), link);
                         messagesBox.getChildren().add(row);
@@ -258,7 +272,8 @@ public class App extends Application {
                         peerListView.getItems().setAll(peers);
                         if (sel != null && peers.contains(sel)) peerListView.getSelectionModel().select(sel);
                     });
-                } catch (InterruptedException ignored) {}
+                } catch (InterruptedException ignored) {
+                }
             }
         }, "ui-peer-refresh");
         t.setDaemon(true);
@@ -295,6 +310,49 @@ public class App extends Application {
         root.setAlignment(Pos.CENTER);
 
         popup.setScene(new Scene(root, 320, 150));
+        popup.show();
+    }
+
+    private void showCallModal(String peerName) {
+        if (callModal != null && callModal.isShowing()) return; // tránh hiện nhiều modal
+
+        callModal = new Stage();
+        callModal.initModality(Modality.APPLICATION_MODAL);
+        callModal.setTitle("In Call with " + peerName);
+
+        Label lbl = new Label("📞 In call with " + peerName);
+        lbl.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+
+        Button endCall = new Button("End Call");
+        endCall.setOnAction(e -> {
+            peer.stopVoiceCall();
+            callModal.close();
+        });
+
+        VBox root = new VBox(20, lbl, endCall);
+        root.setAlignment(Pos.CENTER);
+        root.setPadding(new Insets(20));
+
+        callModal.setScene(new Scene(root, 300, 150));
+        callModal.show();
+    }
+
+    private void showCallEndedPopup(String peerName) {
+        Stage popup = new Stage();
+        popup.initModality(Modality.APPLICATION_MODAL);
+        popup.setTitle("Call Ended");
+
+        Label lb = new Label("📵 Call with " + peerName + " has ended");
+        lb.setStyle("-fx-font-size: 15px; -fx-font-weight: bold;");
+
+        Button ok = new Button("OK");
+        ok.setOnAction(e -> popup.close());
+
+        VBox root = new VBox(15, lb, ok);
+        root.setAlignment(Pos.CENTER);
+        root.setPadding(new Insets(20));
+
+        popup.setScene(new Scene(root, 300, 150));
         popup.show();
     }
 
