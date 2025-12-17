@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.Pos?>
+<?import javafx.scene.text.Text?>
+
+<StackPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" fx:controller="org.example.peer_chat.ui.controllers.InfoPanelController"
+           stylesheets="@../css/info-panel.css"
+           fx:id="infoPanelRoot"
+           styleClass="info-root">
+
+    <!-- Backdrop -->
+    <Pane fx:id="backdrop" onMouseClicked="#onClose" styleClass="info-backdrop" />
+
+    <!-- Right slide panel -->
+    <BorderPane maxWidth="380" prefWidth="360" styleClass="info-panel" StackPane.alignment="CENTER_RIGHT">
+        <right>
+            <VBox spacing="0" BorderPane.alignment="CENTER_RIGHT">
+
+                <!-- Header gradient -->
+                <VBox spacing="12" styleClass="info-header">
+                    <!-- Title + close -->
+                    <HBox alignment="CENTER_LEFT" spacing="8">
+                        <Text text="Thông tin hội thoại" styleClass="info-title" />
+                        <Region HBox.hgrow="ALWAYS" />
+                        <Button fx:id="closeButton" text="✕" onAction="#onClose" styleClass="info-close-btn" />
+                    </HBox>
+
+                    <!-- Avatar & Name -->
+                    <VBox alignment="CENTER" spacing="4">
+                        <Text fx:id="contactAvatar" text="👥" styleClass="info-avatar" />
+                        <Text fx:id="contactName" text="Tên liên hệ" styleClass="info-name" />
+                        <Text fx:id="contactStatus" text="" styleClass="info-status" />
+                        <Text fx:id="contactMemberCount" text="21 thành viên" styleClass="info-member-count" />
+                    </VBox>
+
+                    <!-- Quick actions: chỉ 2 ô như mẫu -->
+                    <HBox spacing="12" alignment="CENTER" styleClass="info-quick-actions">
+                        <Button fx:id="muteButton" onAction="#onMuteNotifications" styleClass="info-quick-btn">
+                            <graphic>
+                                <VBox alignment="CENTER" spacing="6">
+                                    <Label text="🔔" styleClass="info-quick-icon" />
+                                    <Label text="Tắt thông báo" styleClass="info-quick-text" />
+                                </VBox>
+                            </graphic>
+                        </Button>
+                        <Button fx:id="pinButton" onAction="#onPinChat" styleClass="info-quick-btn">
+                            <graphic>
+                                <VBox alignment="CENTER" spacing="6">
+                                    <Label text="📌" styleClass="info-quick-icon" />
+                                    <Label text="Ghim hội thoại" styleClass="info-quick-text" />
+                                </VBox>
+                            </graphic>
+                        </Button>
+                    </HBox>
+                </VBox>
+
+                <!-- Scrollable content -->
+                <ScrollPane fitToWidth="true" vbarPolicy="AS_NEEDED" hbarPolicy="NEVER" styleClass="info-scroll">
+                    <content>
+                        <VBox spacing="8" styleClass="info-content">
+
+                            <!-- media / files / links -->
+                            <VBox spacing="6">
+                                <Button fx:id="viewMediaButton" onAction="#onViewMedia" styleClass="info-row-btn">
+                                    <graphic>
+                                        <HBox alignment="CENTER_LEFT" spacing="10">
+                                            <Label text="🖼" styleClass="info-row-icon" />
+                                            <Label text="Ảnh/Video" styleClass="info-row-text" />
+                                            <Region HBox.hgrow="ALWAYS" />
+                                            <Label text="›" styleClass="info-row-chevron" />
+                                        </HBox>
+                                    </graphic>
+                                </Button>
+
+                                <Button fx:id="viewFilesButton" onAction="#onViewFiles" styleClass="info-row-btn">
+                                    <graphic>
+                                        <HBox alignment="CENTER_LEFT" spacing="10">
+                                            <Label text="📁" styleClass="info-row-icon" />
+                                            <Label text="File" styleClass="info-row-text" />
+                                            <Region HBox.hgrow="ALWAYS" />
+                                            <Label text="›" styleClass="info-row-chevron" />
+                                        </HBox>
+                                    </graphic>
+                                </Button>
+
+                                <Button fx:id="viewLinksButton" onAction="#onViewLinks" styleClass="info-row-btn">
+                                    <graphic>
+                                        <HBox alignment="CENTER_LEFT" spacing="10">
+                                            <Label text="🔗" styleClass="info-row-icon" />
+                                            <Label text="Link" styleClass="info-row-text" />
+                                            <Region HBox.hgrow="ALWAYS" />
+                                            <Label text="›" styleClass="info-row-chevron" />
+                                        </HBox>
+                                    </graphic>
+                                </Button>
+                            </VBox>
+
+                            <!-- Security section -->
+                            <VBox spacing="8" styleClass="info-section">
+                                <Button fx:id="securitySettingsButton" onAction="#onSecuritySettings" styleClass="info-row-btn">
+                                    <graphic>
+                                        <HBox alignment="CENTER_LEFT" spacing="10">
+                                            <Label text="🛡" styleClass="info-row-icon" />
+                                            <Label text="Thiết lập bảo mật" styleClass="info-row-text" />
+                                            <Region HBox.hgrow="ALWAYS" />
+                                            <Label text="›" styleClass="info-row-chevron" />
+                                        </HBox>
+                                    </graphic>
+                                </Button>
+
+                                <VBox spacing="6" styleClass="info-subsection">
+                                    <HBox alignment="TOP_LEFT" spacing="8">
+                                        <Label text="⏱" styleClass="info-sub-icon" />
+                                        <VBox spacing="2">
+                                            <Label text="Tin nhắn tự xóa" styleClass="info-sub-title" />
+                                            <Label text="Chỉ dành cho trường học phổ nhóm" styleClass="info-sub-caption" />
+                                        </VBox>
+                                    </HBox>
+
+                                    <HBox alignment="CENTER_LEFT" spacing="8">
+                                        <Label text="🙈" styleClass="info-sub-icon" />
+                                        <Label text="Ẩn trò chuyện" styleClass="info-sub-title" />
+                                    </HBox>
+                                </VBox>
+                            </VBox>
+
+                            <!-- Danger zone -->
+                            <VBox spacing="6" styleClass="info-danger">
+                                <Button fx:id="reportUserButton" onAction="#onReportUser" styleClass="info-danger-btn">
+                                    <graphic>
+                                        <HBox alignment="CENTER_LEFT" spacing="10">
+                                            <Label text="⚠" styleClass="info-danger-icon" />
+                                            <Label text="Báo xấu" styleClass="info-danger-text" />
+                                        </HBox>
+                                    </graphic>
+                                </Button>
+
+                                <Button fx:id="deleteChatHistoryButton" onAction="#onDeleteChatHistory" styleClass="info-danger-btn">
+                                    <graphic>
+                                        <HBox alignment="CENTER_LEFT" spacing="10">
+                                            <Label text="🗑" styleClass="info-danger-icon" />
+                                            <Label text="Xóa lịch sử trò chuyện" styleClass="info-danger-text" />
+                                        </HBox>
+                                    </graphic>
+                                </Button>
+
+                                <Button fx:id="leaveGroupButton" onAction="#onLeaveGroup" styleClass="info-danger-btn">
+                                    <graphic>
+                                        <HBox alignment="CENTER_LEFT" spacing="10">
+                                            <Label text="🚪" styleClass="info-danger-icon" />
+                                            <Label text="Rời nhóm" styleClass="info-danger-text" />
+                                        </HBox>
+                                    </graphic>
+                                </Button>
+                            </VBox>
+                        </VBox>
+                    </content>
+                </ScrollPane>
+
+            </VBox>
+        </right>
+    </BorderPane>
+
+</StackPane>

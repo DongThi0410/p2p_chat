@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="org.example.peer_chat.ui.controllers.ReceiveCallController">
+
+    <!-- Header -->
+    <top>
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <Label text="A đang gọi..." style="-fx-font-size: 18px; -fx-font-weight: bold;" />
+        </HBox>
+    </top>
+
+    <!-- Body -->
+    <center>
+        <VBox alignment="CENTER" spacing="20">
+            <Label text="A đang gọi cho bạn..." style="-fx-font-size: 16px;" />
+            <Button text="Chấp nhận" onAction="#onAcceptCall" style="-fx-background-color: green; -fx-text-fill: white;" />
+            <Button text="Hủy" onAction="#onRejectCall" style="-fx-background-color: red; -fx-text-fill: white;" />
+        </VBox>
+    </center>
+</BorderPane>

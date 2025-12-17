@@ -1,0 +1,117 @@
+/* Backdrop */
+.profile-backdrop {
+    -fx-background-color: rgba(0,0,0,0.5);
+}
+
+/* Modal shell */
+.profile-modal-panel {
+    -fx-background-color: white;
+    -fx-border-radius: 24px;
+    -fx-padding: 0;
+    -fx-max-width: 460px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 20, 0.25, 0, 0);
+}
+
+/* Header */
+.profile-header {
+    -fx-padding: 16px 20px;
+    -fx-background-color: linear-gradient(to right, #ffe4f7, #e0e7ff);
+    -fx-border-color: #f9a8d4 transparent #f9a8d4 transparent;
+    -fx-border-width: 0 0 2 0;
+}
+
+.profile-header-icon {
+    -fx-font-size: 18px;
+}
+
+.profile-header-title {
+    -fx-font-size: 16px;
+    -fx-text-fill: #1f2933;
+}
+
+.profile-close-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #6b7280;
+    -fx-padding: 4px 6px;
+}
+
+.profile-close-btn:hover {
+    -fx-background-color: rgba(255,255,255,0.6);
+}
+
+/* Content scroll */
+.profile-scroll {
+    -fx-background-color: transparent;
+}
+
+.profile-content {
+    -fx-padding: 16px 20px;
+}
+
+.profile-section-label {
+    -fx-text-fill: #374151;
+    -fx-font-size: 13px;
+}
+
+/* Avatar grid */
+.profile-avatar-btn {
+    -fx-font-size: 20px;
+    -fx-padding: 6px 8px;
+    -fx-background-radius: 14px;
+    -fx-border-radius: 14px;
+    -fx-background-color: #f3f4f6;
+    -fx-border-color: transparent;
+}
+
+.profile-avatar-btn:hover {
+    -fx-background-color: #fee2f2;
+}
+
+/* Inputs */
+.profile-name-field,
+.profile-status-field,
+.profile-bio-field {
+    -fx-background-radius: 14px;
+    -fx-border-radius: 14px;
+    -fx-padding: 8px 12px;
+    -fx-text-fill: #111827;
+}
+
+.profile-name-field {
+    -fx-background-color: #fef2f2;
+    -fx-border-color: #fda4af;
+}
+
+.profile-status-field {
+    -fx-background-color: #eff6ff;
+    -fx-border-color: #93c5fd;
+}
+
+.profile-bio-field {
+    -fx-background-color: #f5f3ff;
+    -fx-border-color: #a855f7;
+}
+
+/* Footer */
+.profile-footer {
+    -fx-padding: 16px 20px;
+    -fx-background-color: linear-gradient(to right, #fdf2ff, #eff6ff);
+    -fx-border-color: #f9a8d4 transparent transparent transparent;
+    -fx-border-width: 2 0 0 0;
+}
+
+.profile-cancel-btn {
+    -fx-background-color: #e5e7eb;
+    -fx-text-fill: #374151;
+    -fx-background-radius: 14px;
+    -fx-border-radius: 14px;
+    -fx-padding: 8px 14px;
+}
+
+.profile-save-btn {
+    -fx-background-color: linear-gradient(to right, #fb7185, #a855f7, #60a5fa);
+    -fx-text-fill: white;
+    -fx-background-radius: 14px;
+    -fx-border-radius: 14px;
+    -fx-padding: 8px 16px;
+}

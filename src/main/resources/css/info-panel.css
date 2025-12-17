@@ -1,0 +1,168 @@
+/* Root / backdrop */
+.info-root {
+    -fx-background-color: transparent;
+}
+
+.info-backdrop {
+    /* Để phần bên trái không bị một mảng xám riêng, dùng nền trong suốt
+       (nếu muốn mờ nền, chỉnh lại thành rgba(0,0,0,0.1) hoặc theo ý bạn) */
+    -fx-background-color: transparent;
+}
+
+/* Panel bên phải */
+.info-panel {
+    -fx-background-color: white;
+    -fx-alignment: CENTER_RIGHT;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.35), 30, 0.4, -6, 0);
+}
+
+/* Header gradient giống React */
+.info-header {
+    -fx-padding: 16px;
+    -fx-spacing: 12px;
+    -fx-background-color: linear-gradient(to right, #ffe4f3, #e9d5ff);
+    -fx-border-color: #f9a8d4 transparent #f9a8d4 transparent;
+    -fx-border-width: 0 0 2 0;
+}
+
+.info-title {
+    -fx-font-size: 16px;
+    -fx-text-fill: #111827;
+}
+
+.info-close-btn {
+    -fx-background-radius: 999;
+    -fx-background-color: rgba(255,255,255,0.7);
+    -fx-text-fill: #4b5563;
+    -fx-padding: 4 8 4 8;
+}
+
+.info-close-btn:hover {
+    -fx-background-color: white;
+}
+
+.info-avatar {
+    -fx-font-size: 40px;
+}
+
+.info-name {
+    -fx-font-size: 16px;
+    -fx-text-fill: #111827;
+}
+
+.info-status {
+    -fx-font-size: 12px;
+    -fx-text-fill: #6b7280;
+}
+
+.info-member-count {
+    -fx-font-size: 12px;
+    -fx-text-fill: #6b7280;
+}
+
+/* Quick actions */
+.info-quick-actions {
+    -fx-padding: 12 0 4 0;
+}
+
+.info-quick-btn {
+    -fx-background-color: rgba(255,255,255,0.9);
+    -fx-background-radius: 18;
+    -fx-border-radius: 18;
+    -fx-padding: 8 12 8 12;
+}
+
+.info-quick-btn:hover {
+    -fx-background-color: white;
+}
+
+.info-quick-icon {
+    -fx-font-size: 18px;
+}
+
+.info-quick-text {
+    -fx-font-size: 11px;
+    -fx-text-fill: #4b5563;
+}
+
+/* Scroll content */
+.info-scroll {
+    -fx-background-color: transparent;
+}
+
+.info-content {
+    -fx-padding: 12 16 16 16;
+}
+
+/* Row buttons (Ảnh/Video, File, Link, Thiết lập bảo mật) */
+.info-row-btn {
+    -fx-background-color: transparent;
+    -fx-background-radius: 16;
+    -fx-padding: 10 12 10 12;
+}
+
+.info-row-btn:hover {
+    -fx-background-color: #ffe4f3;
+}
+
+.info-row-icon {
+    -fx-font-size: 16px;
+}
+
+.info-row-text {
+    -fx-font-size: 13px;
+    -fx-text-fill: #111827;
+}
+
+.info-row-chevron {
+    -fx-font-size: 16px;
+    -fx-text-fill: #9ca3af;
+}
+
+/* Security section */
+.info-section {
+    -fx-padding: 10 0 0 0;
+}
+
+.info-subsection {
+    -fx-padding: 6 0 0 24;
+}
+
+.info-sub-icon {
+    -fx-font-size: 14px;
+}
+
+.info-sub-title {
+    -fx-font-size: 12px;
+    -fx-text-fill: #4b5563;
+}
+
+.info-sub-caption {
+    -fx-font-size: 11px;
+    -fx-text-fill: #9ca3af;
+}
+
+/* Danger zone */
+.info-danger {
+    -fx-padding: 10 0 0 0;
+}
+
+.info-danger-btn {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0;
+    -fx-padding: 6 0 6 0;
+}
+
+.info-danger-btn:hover {
+    -fx-background-color: transparent;
+}
+
+.info-danger-icon {
+    -fx-font-size: 14px;
+    -fx-text-fill: #f97316;
+}
+
+.info-danger-text {
+    -fx-font-size: 13px;
+    -fx-text-fill: #ef4444;
+}

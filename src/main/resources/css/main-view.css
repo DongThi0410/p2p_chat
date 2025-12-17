@@ -1,0 +1,27 @@
+/* Main container */
+#videoCallModal {
+    -fx-background-color: rgba(0, 0, 0, 0.6);
+    -fx-alignment: center;
+}
+
+/* Sidebar */
+#contactListView {
+    -fx-background-color: #f5f5f5;
+    -fx-border-color: #e0e0e0;
+}
+
+/* Chat area */
+#messagesBox {
+    -fx-padding: 10px;
+}
+
+/* Buttons */
+#logoutButton {
+    -fx-background-color: #ff6347; /* Tomato */
+    -fx-text-fill: white;
+}
+
+#endCallBtn {
+    -fx-background-color: #ff6347; /* Tomato */
+    -fx-text-fill: white;
+}

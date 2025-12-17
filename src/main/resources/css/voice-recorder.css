@@ -1,0 +1,89 @@
+/* Backdrop bao quanh dialog */
+.backdrop-root {
+    -fx-alignment: center;
+    -fx-background-color: rgba(0, 0, 0, 0.6);
+}
+
+/* Card chính: gradient hồng–tím, bo tròn lớn, shadow */
+.recorder-card {
+    -fx-padding: 28 32 28 32;
+    -fx-spacing: 24;
+    -fx-background-radius: 26;
+    -fx-border-radius: 26;
+    -fx-background-color: linear-gradient(to bottom right, #9b2cff, #e61e9b, #ff4d7a);
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.65), 40, 0.4, 0, 18);
+}
+
+/* Tiêu đề "Nhấn để ghi âm" */
+.recorder-title {
+    -fx-fill: white;
+    -fx-font-size: 17px;
+    -fx-font-weight: 600;
+}
+
+/* Nút đóng hình tròn phía trên bên phải */
+.icon-close-button {
+    -fx-background-radius: 999;
+    -fx-background-color: rgba(0, 0, 0, 0.25);
+    -fx-text-fill: white;
+    -fx-padding: 4 8 4 8;
+}
+
+.icon-close-button:hover {
+    -fx-background-color: rgba(0, 0, 0, 0.4);
+}
+
+/* Vùng halo mờ xung quanh mic */
+.mic-halo {
+    -fx-fill: radial-gradient(center 50% 50%, radius 80%, rgba(255, 143, 242, 0.8), transparent);
+}
+
+/* Vòng tròn mic chính */
+.mic-circle {
+    -fx-fill: linear-gradient(to bottom right, #ff7af5, #e845ff, #7d6bff);
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.55), 30, 0.6, 0, 10);
+}
+
+/* Thời gian ghi âm */
+.duration-text {
+    -fx-fill: white;
+    -fx-font-size: 16px;
+}
+
+/* Thanh waveform (các cột nhỏ) */
+.wave-bar {
+    -fx-fill: rgba(255, 255, 255, 0.85);
+    -fx-arc-width: 6;
+    -fx-arc-height: 6;
+}
+
+/* Nút phụ: viền trắng, nền mờ */
+.secondary-button {
+    -fx-background-radius: 999;
+    -fx-border-radius: 999;
+    -fx-background-color: rgba(255,255,255,0.12);
+    -fx-border-color: rgba(255,255,255,0.7);
+    -fx-border-width: 1.2;
+    -fx-text-fill: white;
+    -fx-font-size: 13px;
+    -fx-padding: 8 18 8 18;
+}
+
+.secondary-button:hover {
+    -fx-background-color: rgba(255,255,255,0.22);
+}
+
+/* Nút chính: gradient hồng–tím */
+.primary-button {
+    -fx-background-radius: 999;
+    -fx-border-radius: 999;
+    -fx-background-color: linear-gradient(to right, #ff5ab4, #9b5bff);
+    -fx-text-fill: white;
+    -fx-font-size: 13px;
+    -fx-padding: 8 18 8 18;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.45), 24, 0.4, 0, 10);
+}
+
+.primary-button:hover {
+    -fx-background-color: linear-gradient(to right, #ff7dc7, #b27aff);
+}

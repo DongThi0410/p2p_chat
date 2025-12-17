@@ -26,7 +26,39 @@ public class VoiceEngine {
     }
 
     public void start(String remoteIp, int remotePort) {
-        if (running) return;
+        if (running) {
+            // Nếu đang chạy, dừng trước khi start lại
+            stop();
+        }
+        
+        // Tạo lại socket nếu đã bị đóng hoặc null
+        if (socket == null || socket.isClosed()) {
+            try {
+                socket = new DatagramSocket(localPort);
+            } catch (SocketException e) {
+                e.printStackTrace();
+                return;
+            }
+        }
+        
+        // Tạo lại audio lines nếu đã bị đóng hoặc null
+        try {
+            AudioFormat fmt = new AudioFormat(16000.0f, 16, 1, true, false);
+            if (mic == null || !mic.isOpen()) {
+                DataLine.Info micInfo = new DataLine.Info(TargetDataLine.class, fmt);
+                mic = (TargetDataLine) AudioSystem.getLine(micInfo);
+                mic.open(fmt);
+            }
+            if (speaker == null || !speaker.isOpen()) {
+                DataLine.Info spkInfo = new DataLine.Info(SourceDataLine.class, fmt);
+                speaker = (SourceDataLine) AudioSystem.getLine(spkInfo);
+                speaker.open(fmt);
+            }
+        } catch (LineUnavailableException e) {
+            e.printStackTrace();
+            return;
+        }
+        
         running = true;
         mic.start();
         speaker.start();
@@ -74,7 +106,22 @@ public class VoiceEngine {
         running = false;
         try { mic.stop(); mic.close(); } catch (Exception ignored) {}
         try { speaker.stop(); speaker.close(); } catch (Exception ignored) {}
-        try { socket.close(); } catch (Exception ignored) {}
+        // KHÔNG đóng socket ở đây để có thể reuse cho lần gọi tiếp theo
+        // Socket sẽ được đóng khi PeerHandle shutdown hoàn toàn
+    }
+    
+    /**
+     * Đóng socket hoàn toàn. Chỉ gọi khi PeerHandle shutdown.
+     */
+    public void shutdown() {
+        running = false;
+        try { mic.stop(); mic.close(); } catch (Exception ignored) {}
+        try { speaker.stop(); speaker.close(); } catch (Exception ignored) {}
+        try { 
+            if (socket != null && !socket.isClosed()) {
+                socket.close(); 
+            }
+        } catch (Exception ignored) {}
     }
 
     public int getLocalPort() { return localPort; }

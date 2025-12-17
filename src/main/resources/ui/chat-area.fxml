@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.input.KeyCode?>
+<?import javafx.scene.text.Text?>
+<?import javafx.geometry.Pos?>
+<?import javafx.geometry.Insets?>
+
+<StackPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+           fx:controller="org.example.peer_chat.ui.controllers.ChatAreaController"
+           stylesheets="@../css/chat-area.css">
+
+    <children>
+        <BorderPane styleClass="chat-root">
+
+    <!-- Chat Header -->
+    <top>
+        <HBox spacing="10" alignment="CENTER_LEFT" styleClass="chat-header">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10" />
+            </padding>
+
+            <!-- Left: avatar + name + status -->
+            <Label fx:id="contactAvatar" text="🐱" styleClass="chat-header-avatar" />
+            <VBox>
+                <Label fx:id="contactName" text="Nguyễn Văn A" styleClass="chat-header-name" />
+                <Label fx:id="contactStatus" text="✨ Đang hoạt động" styleClass="chat-header-status" />
+            </VBox>
+
+            <!-- Spacer -->
+            <Region HBox.hgrow="ALWAYS" />
+
+            <!-- Right: call / video / info buttons -->
+            <HBox spacing="8" alignment="CENTER_RIGHT">
+                <Button fx:id="callButton" text="📞" onAction="#onCallVoice" styleClass="chat-call-btn" />
+                <Button fx:id="videoButton" text="🎥" onAction="#onCallVideo" styleClass="chat-video-btn" />
+                <Button fx:id="infoButton" text="ℹ" onAction="#onOpenInfoPanel" styleClass="chat-screen-btn" />
+            </HBox>
+        </HBox>
+    </top>
+
+    <!-- Messages Area -->
+    <center>
+        <ScrollPane fx:id="messageScrollPane" styleClass="chat-scroll" style="-fx-background-color: transparent;">
+            <VBox fx:id="messagesBox" spacing="8" styleClass="chat-messages-box">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10" />
+                </padding>
+            </VBox>
+        </ScrollPane>
+    </center>
+
+    <!-- Input Area -->
+    <bottom>
+        <HBox spacing="10" alignment="CENTER_LEFT" styleClass="chat-input-bar">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10" />
+            </padding>
+
+            <!-- Left utility buttons: attach / image / emoji -->
+            <Button fx:id="attachButton" text="📎" styleClass="chat-util-btn" />
+            <Button fx:id="imageButton" text="🖼" styleClass="chat-util-btn-blue" />
+            <Button fx:id="emojiButton" text="😊" styleClass="chat-util-btn-yellow" />
+
+            <!-- Message field expands -->
+            <TextField fx:id="messageField" promptText="Nhập tin nhắn... 💬" onKeyPressed="#onEnterPressed" styleClass="chat-input-field" HBox.hgrow="ALWAYS" />
+
+            <!-- Right action buttons: send / voice -->
+            <Button fx:id="sendButton" text="➤" onAction="#onSendMessage" styleClass="chat-send-btn" />
+            <Button fx:id="voiceButton" text="🎙" onAction="#onStartVoiceMessage" styleClass="chat-voice-btn" />
+        </HBox>
+    </bottom>
+        </BorderPane>
+
+        <!-- Info panel overlay embedded in chat area (ẩn mặc định, sát mép phải) -->
+        <fx:include source="info-panel.fxml" fx:id="infoPanelRoot" visible="false" managed="false" StackPane.alignment="CENTER_RIGHT" />
+    </children>
+</StackPane>

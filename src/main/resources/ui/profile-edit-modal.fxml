@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.Pos?>
+<?import javafx.scene.text.Text?>
+
+<StackPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" fx:controller="org.example.peer_chat.ui.controllers.ProfileEditModalController"
+           stylesheets="@../css/profile-edit-modal.css">
+    <!-- Backdrop -->
+    <Pane fx:id="backdrop" styleClass="profile-backdrop" onMouseClicked="#onClose"/>
+
+    <!-- Modal panel -->
+    <VBox fx:id="modalPanel" spacing="0" styleClass="profile-modal-panel">
+
+        <!-- Header -->
+        <HBox spacing="8" alignment="CENTER_LEFT" styleClass="profile-header">
+            <Label text="✏" styleClass="profile-header-icon" />
+            <Label fx:id="modalTitle" text="Chỉnh sửa thông tin" styleClass="profile-header-title" />
+            <Region HBox.hgrow="ALWAYS" />
+            <Button fx:id="closeButton" text="✕" onAction="#onClose" styleClass="profile-close-btn" />
+        </HBox>
+
+        <!-- Content -->
+        <ScrollPane fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED" styleClass="profile-scroll">
+            <VBox spacing="16" styleClass="profile-content">
+
+                <!-- Avatar Selection -->
+                <VBox spacing="8">
+                    <Label text="Chọn Avatar" styleClass="profile-section-label" />
+                    <FlowPane hgap="8" vgap="8">
+                        <Button text="🐱" onAction="#onSelectAvatar" styleClass="profile-avatar-btn" />
+                        <Button text="🐰" onAction="#onSelectAvatar" styleClass="profile-avatar-btn" />
+                        <Button text="🐶" onAction="#onSelectAvatar" styleClass="profile-avatar-btn" />
+                        <Button text="🐻" onAction="#onSelectAvatar" styleClass="profile-avatar-btn" />
+                        <Button text="🦊" onAction="#onSelectAvatar" styleClass="profile-avatar-btn" />
+                        <Button text="🐼" onAction="#onSelectAvatar" styleClass="profile-avatar-btn" />
+                        <Button text="🐯" onAction="#onSelectAvatar" styleClass="profile-avatar-btn" />
+                        <Button text="🦁" onAction="#onSelectAvatar" styleClass="profile-avatar-btn" />
+                        <Button text="🐮" onAction="#onSelectAvatar" styleClass="profile-avatar-btn" />
+                        <Button text="🐷" onAction="#onSelectAvatar" styleClass="profile-avatar-btn" />
+                        <Button text="🐸" onAction="#onSelectAvatar" styleClass="profile-avatar-btn" />
+                        <Button text="🐙" onAction="#onSelectAvatar" styleClass="profile-avatar-btn" />
+                    </FlowPane>
+                </VBox>
+
+                <!-- Name -->
+                <VBox spacing="6">
+                    <Label text="Tên hiển thị ✨" styleClass="profile-section-label" />
+                    <TextField fx:id="nameField" promptText="Nhập tên của bạn" onAction="#onNameChanged" styleClass="profile-name-field" />
+                </VBox>
+
+                <!-- Status -->
+                <VBox spacing="6">
+                    <Label text="Trạng thái 💭" styleClass="profile-section-label" />
+                    <TextField fx:id="statusField" promptText="Bạn đang nghĩ gì?" onAction="#onStatusChanged" styleClass="profile-status-field" />
+                </VBox>
+
+                <!-- Bio -->
+                <VBox spacing="6">
+                    <Label text="Giới thiệu bản thân 🌟" styleClass="profile-section-label" />
+                    <TextArea fx:id="bioField" promptText="Viết vài dòng về bạn..." styleClass="profile-bio-field" />
+                </VBox>
+
+            </VBox>
+        </ScrollPane>
+
+        <!-- Footer -->
+        <HBox spacing="10" alignment="CENTER" styleClass="profile-footer">
+            <Button fx:id="cancelButton" text="Hủy" onAction="#onClose" styleClass="profile-cancel-btn" />
+            <Button fx:id="saveButton" text="💾 Lưu thay đổi" onAction="#onSave" styleClass="profile-save-btn" />
+        </HBox>
+    </VBox>
+</StackPane>

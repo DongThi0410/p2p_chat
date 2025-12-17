@@ -1,0 +1,89 @@
+/* Root gradient background */
+.login-root {
+    -fx-background-color: linear-gradient(to bottom right,
+        #fbcfe8, /* pink-200 */
+        #ddd6fe, /* purple-200 */
+        #bfdbfe  /* blue-200 */
+    );
+}
+
+/* Card: glass + border + shadow */
+.login-card {
+    -fx-background-color: rgba(255,255,255,0.90);
+    -fx-background-radius: 24;
+    -fx-border-radius: 24;
+    -fx-border-width: 4;
+    -fx-border-color: #f9a8d4; /* pink-300 */
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.25), 30, 0.2, 0, 10);
+}
+
+/* Title gradient-like (JavaFX không hỗ trợ text gradient chuẩn như web, nên dùng màu nổi bật) */
+.login-title {
+    -fx-font-size: 26px;
+    -fx-font-weight: 800;
+    -fx-text-fill: #7c3aed; /* purple-600 */
+}
+
+/* Emojis */
+.big-emoji { -fx-font-size: 44px; }
+.mid-emoji { -fx-font-size: 34px; }
+
+.clickable { -fx-cursor: hand; }
+
+/* Inputs */
+.login-input {
+    -fx-pref-height: 44px;
+    -fx-background-radius: 14;
+    -fx-border-radius: 14;
+    -fx-border-width: 2;
+    -fx-padding: 0 14 0 14;
+    -fx-font-size: 14px;
+    -fx-text-fill: #1f2937; /* gray-800 */
+}
+
+.login-input-username {
+    -fx-background-color: #fdf2f8; /* pink-50 */
+    -fx-border-color: #f9a8d4;     /* pink-300 */
+}
+.login-input-password {
+    -fx-background-color: #eff6ff; /* blue-50 */
+    -fx-border-color: #93c5fd;     /* blue-300 */
+}
+.login-input-confirm {
+    -fx-background-color: #f5f3ff; /* purple-50 */
+    -fx-border-color: #c4b5fd;     /* purple-300 */
+}
+
+/* Focus */
+.login-input:focused {
+    -fx-border-color: #a78bfa; /* purple-400 */
+    -fx-effect: dropshadow(gaussian, rgba(167,139,250,0.35), 12, 0.2, 0, 0);
+}
+
+/* Submit button */
+.login-submit {
+    -fx-pref-height: 44px;
+    -fx-max-width: Infinity;
+    -fx-background-radius: 14;
+    -fx-text-fill: white;
+    -fx-font-size: 15px;
+    -fx-font-weight: 800;
+    -fx-cursor: hand;
+    -fx-background-color: linear-gradient(to right, #fb7185, #a78bfa, #60a5fa);
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.20), 16, 0.2, 0, 6);
+}
+.login-submit:hover {
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.28), 20, 0.2, 0, 8);
+}
+
+/* Toggle link */
+.login-toggle {
+    -fx-background-color: transparent;
+    -fx-text-fill: #7c3aed; /* purple-600 */
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+    -fx-cursor: hand;
+}
+.login-toggle:hover {
+    -fx-text-fill: #5b21b6; /* purple-800 */
+}

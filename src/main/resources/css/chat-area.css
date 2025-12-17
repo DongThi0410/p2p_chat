@@ -1,0 +1,162 @@
+/* Root of chat area */
+.chat-root {
+    -fx-background-color: linear-gradient(to bottom, #fdf2ff, #fee2f2);
+}
+
+/* Header: giống thanh trên cùng trong React */
+.chat-header {
+    -fx-padding: 16px;
+    -fx-spacing: 12px;
+    -fx-alignment: CENTER_LEFT;
+    -fx-background-color: rgba(255, 255, 255, 0.85);
+    -fx-border-color: #f9a8d4 transparent #f9a8d4 transparent;
+    -fx-border-width: 0 0 2 0;
+}
+
+.chat-header-avatar {
+    -fx-font-size: 32px;
+    -fx-min-width: 40px;
+}
+
+.chat-header-name {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #111827;
+}
+
+.chat-header-status {
+    -fx-font-size: 12px;
+    -fx-text-fill: #f97316;
+}
+
+/* Scroll + messages box */
+.chat-scroll {
+    -fx-fit-to-width: true;
+    -fx-background-color: transparent;
+}
+
+.chat-messages-box {
+    -fx-padding: 16px;
+    -fx-spacing: 8px;
+}
+
+/* Message bubbles: dùng trực tiếp trong controller qua setStyle, nhưng có thể thêm class sau này */
+
+/* Input bar */
+.chat-input-bar {
+    -fx-padding: 12px 16px;
+    -fx-spacing: 10px;
+    -fx-alignment: CENTER_LEFT;
+    -fx-background-color: rgba(255, 255, 255, 0.88);
+    -fx-border-color: #f9a8d4 transparent transparent transparent;
+    -fx-border-width: 2 0 0 0;
+}
+
+.chat-input-field {
+    -fx-background-color: white;
+    -fx-border-color: #f9a8d4;
+    -fx-border-radius: 16px;
+    -fx-background-radius: 16px;
+    -fx-padding: 8px 12px;
+    -fx-text-fill: #111827;
+}
+
+.chat-send-btn,
+.chat-voice-btn {
+    -fx-background-radius: 16px;
+    -fx-border-radius: 16px;
+    -fx-padding: 8px 14px;
+    -fx-text-fill: white;
+    -fx-font-weight: 600;
+}
+
+.chat-send-btn {
+    -fx-background-color: linear-gradient(to right, #fb7185, #a855f7);
+}
+
+.chat-voice-btn {
+    -fx-background-color: linear-gradient(to right, #a855f7, #fb7185);
+}
+
+/* Header call / video / screen buttons */
+.chat-call-btn,
+.chat-video-btn,
+.chat-screen-btn {
+    -fx-background-radius: 12px;
+    -fx-border-radius: 12px;
+    -fx-padding: 6px 10px;
+    -fx-font-size: 14px;
+    -fx-border-width: 2px;
+}
+
+.chat-call-btn {
+    -fx-background-color: #dcfce7;
+    -fx-border-color: #86efac;
+    -fx-text-fill: #16a34a;
+}
+
+.chat-video-btn {
+    -fx-background-color: #dbeafe;
+    -fx-border-color: #93c5fd;
+    -fx-text-fill: #2563eb;
+}
+
+.chat-screen-btn {
+    -fx-background-color: #ede9fe;
+    -fx-border-color: #a855f7;
+    -fx-text-fill: #6b21a8;
+}
+
+/* Left utility buttons */
+.chat-util-btn,
+.chat-util-btn-blue,
+.chat-util-btn-yellow {
+    -fx-background-radius: 12px;
+    -fx-border-radius: 12px;
+    -fx-padding: 6px 10px;
+    -fx-font-size: 14px;
+    -fx-border-width: 2px;
+}
+
+.chat-util-btn {
+    -fx-background-color: #fee2e2;
+    -fx-border-color: #fb7185;
+    -fx-text-fill: #db2777;
+}
+
+.chat-util-btn-blue {
+    -fx-background-color: #dbeafe;
+    -fx-border-color: #60a5fa;
+    -fx-text-fill: #2563eb;
+}
+
+.chat-util-btn-yellow {
+    -fx-background-color: #fef3c7;
+    -fx-border-color: #facc15;
+    -fx-text-fill: #b45309;
+}
+
+/* Bubble rows and bubbles */
+.chat-row {
+    -fx-padding: 4px 0;
+}
+
+.bubble-sent,
+.bubble-received {
+    -fx-padding: 8px 14px;
+    -fx-background-radius: 18px;
+    -fx-border-radius: 18px;
+    -fx-font-size: 13px;
+}
+
+.bubble-sent {
+    -fx-background-color: linear-gradient(to right, #fb7185, #a855f7);
+    -fx-text-fill: white;
+}
+
+.bubble-received {
+    -fx-background-color: white;
+    -fx-border-color: #f9a8d4;
+    -fx-border-width: 2px;
+    -fx-text-fill: #111827;
+}

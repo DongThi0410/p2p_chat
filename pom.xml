@@ -16,6 +16,17 @@
 
     <dependencies>
         <dependency>
+            <groupId>org.testfx</groupId>
+            <artifactId>testfx-core</artifactId>
+            <version>4.0.17</version>
+        </dependency>
+        <dependency>
+            <groupId>org.testfx</groupId>
+            <artifactId>testfx-junit5</artifactId>
+            <version>4.0.17</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-controls</artifactId>
             <version>19.0.2.1</version>
@@ -64,6 +75,26 @@
             <artifactId>sqlite-jdbc</artifactId>
             <version>3.41.2.1</version>
         </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>RELEASE</version>
+            <scope>compile</scope>
+        </dependency>
+        
+        <!-- Webcam Capture for video call -->
+        <dependency>
+            <groupId>com.github.sarxos</groupId>
+            <artifactId>webcam-capture</artifactId>
+            <version>0.3.12</version>
+        </dependency>
+        
+        <!-- JavaFX Media for video support -->
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-media</artifactId>
+            <version>19.0.2.1</version>
+        </dependency>
 
     </dependencies>
 
@@ -83,7 +114,7 @@
                 <artifactId>javafx-maven-plugin</artifactId>
                 <version>0.0.8</version>
                 <configuration>
-                    <mainClass>com.example.p2pchat.App</mainClass>
+                    <mainClass>org.example.peer_chat.AppTestUI</mainClass>
                 </configuration>
                 <executions>
                     <execution>
@@ -100,6 +131,30 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.0</version>
+                <configuration>
+                    <mainClass>org.example.peer_chat.AppTestUI</mainClass>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+                <configuration>
+                    <argLine>
+                        --add-modules javafx.controls,javafx.fxml
+                        --add-opens javafx.graphics/com.sun.javafx.application=testfx.core
+                        --add-opens javafx.base/com.sun.javafx.binding=testfx.core
+                        --add-opens javafx.base/com.sun.javafx.property=testfx.core
+                        --add-opens javafx.graphics/com.sun.javafx.stage=testfx.core
+                        --add-opens javafx.graphics/com.sun.javafx.scene=testfx.core
+                        --add-opens javafx.controls/com.sun.javafx.scene.control=testfx.core
+                    </argLine>
+                </configuration>
             </plugin>
         </plugins>
     </build>

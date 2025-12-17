@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.Pos?>
+<?import javafx.scene.Scene?>
+
+<BorderPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
+            fx:controller="org.example.peer_chat.ui.controllers.MainController"
+            stylesheets="@../css/main-view.css">
+
+    <!-- Center: ChatArea -->
+    <center>
+        <fx:include fx:id="chatAreaRoot" source="chat-area.fxml" />
+    </center>
+
+    <!-- Left: Sidebar -->
+    <left>
+        <fx:include fx:id="sidebarRoot" source="sidebar.fxml" />
+    </left>
+
+    <!-- Call modal for video -->
+    <StackPane fx:id="videoCallModal" visible="false">
+        <!-- TODO: add call-modal content here later -->
+    </StackPane>
+
+</BorderPane>

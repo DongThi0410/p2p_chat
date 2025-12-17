@@ -88,6 +88,11 @@ public class App extends Application {
                 }
 
                 @Override
+                public void onIncomingVideoCall(String callerName, String callerIp, int callerVoicePort) {
+                    Platform.runLater(() -> showIncomingCallPopup(callerName, callerIp, callerVoicePort));
+                }
+
+                @Override
                 public void onCallStarted(String peerName) {
                     Platform.runLater(() -> {
                         callStatusLabel.setText("📞 In call with " + peerName);

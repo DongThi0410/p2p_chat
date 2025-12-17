@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.Pos?>
+<?import javafx.scene.Scene?>
+<?import javafx.scene.text.Text?>
+<?import javafx.scene.shape.Circle?>
+
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" fx:controller="org.example.peer_chat.ui.controllers.SidebarController"
+      spacing="10" styleClass="sidebar-root"
+      stylesheets="@../css/sidebar.css">
+
+    <!-- Header -->
+    <HBox spacing="10" alignment="CENTER_LEFT" styleClass="sidebar-header">
+        <Label fx:id="userAvatar" text="🐱" styleClass="sidebar-avatar" />
+        <VBox>
+            <Label fx:id="userNameLabel" text="Current User" />
+            <HBox alignment="CENTER_LEFT" spacing="5">
+                <Circle fx:id="statusIndicator" radius="5" fill="green" />
+                <Text fx:id="statusText" text="Online" />
+            </HBox>
+        </VBox>
+        <Button fx:id="logoutButton" text="Logout" onAction="#onLogout" styleClass="sidebar-logout-btn" />
+    </HBox>
+
+    <!-- Search bar -->
+    <TextField fx:id="searchField" promptText="Search..." onKeyTyped="#onSearchContacts" styleClass="sidebar-search" />
+
+    <!-- Actions -->
+    <VBox spacing="10" styleClass="sidebar-actions">
+        <Button fx:id="addFriendButton" text="Add Friend" onAction="#onAddFriend" styleClass="sidebar-action-primary" />
+        <Button fx:id="createGroupButton" text="Create Group" onAction="#onCreateGroup" styleClass="sidebar-action-secondary" />
+        <Button fx:id="editProfileButton" text="Edit Profile" onAction="#onEditProfile" styleClass="sidebar-action-tertiary" />
+    </VBox>
+
+    <!-- Inline Add Friend form (shown after clicking Add Friend) -->
+    <HBox fx:id="addFriendForm" spacing="8" alignment="CENTER_LEFT" visible="false" managed="false" styleClass="sidebar-add-friend-form">
+        <TextField fx:id="friendIdField" promptText="Nhập ID bạn bè... 🐱" styleClass="sidebar-add-friend-field" />
+        <Button fx:id="addFriendConfirmButton" text="Thêm" onAction="#onConfirmAddFriend" styleClass="sidebar-add-friend-btn" />
+    </HBox>
+
+    <!-- Contacts List -->
+    <ListView fx:id="contactsListView" onMouseClicked="#onSelectContact" />
+</VBox>

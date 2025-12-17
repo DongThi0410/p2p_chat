@@ -1,0 +1,118 @@
+/* Root container */
+.sidebar-root {
+    -fx-padding: 0;
+    -fx-background-color: rgba(255, 255, 255, 0.85);
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 16, 0.25, 0, 0);
+}
+
+/* Header */
+.sidebar-header {
+    -fx-padding: 16px;
+    -fx-spacing: 12px;
+    -fx-alignment: CENTER_LEFT;
+    -fx-background-color: linear-gradient(to right, #ffe4f7, #f3e8ff);
+    -fx-border-color: #ffc0f3 transparent #ffc0f3 transparent;
+    -fx-border-width: 0 0 2 0;
+}
+
+.sidebar-avatar {
+    -fx-font-size: 24px;
+    -fx-min-width: 40px;
+    -fx-min-height: 40px;
+    -fx-alignment: center;
+    -fx-background-radius: 999px;
+    -fx-background-insets: 0;
+    -fx-padding: 8px;
+    -fx-background-color: linear-gradient(to bottom right, #fda4af, #c4b5fd);
+    -fx-border-color: white;
+    -fx-border-width: 2;
+    -fx-border-radius: 999px;
+}
+
+.sidebar-logout-btn {
+    -fx-background-color: transparent;
+    -fx-text-fill: #6b7280;
+    -fx-padding: 6px 8px;
+}
+
+.sidebar-logout-btn:hover {
+    -fx-text-fill: #ec4899;
+}
+
+/* Search */
+.sidebar-search {
+    -fx-padding: 8px 12px;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-background-color: white;
+    -fx-border-color: #f9a8d4;
+    -fx-text-fill: #111827;
+}
+
+.sidebar-actions {
+    -fx-padding: 12px;
+    -fx-spacing: 8px;
+    -fx-border-color: #f9a8d4 transparent #f9a8d4 transparent;
+    -fx-border-width: 0 0 2 0;
+}
+
+.sidebar-action-primary,
+.sidebar-action-secondary,
+.sidebar-action-tertiary {
+    -fx-padding: 8px 12px;
+    -fx-background-radius: 10px;
+    -fx-border-radius: 10px;
+    -fx-font-weight: 600;
+}
+
+.sidebar-action-primary {
+    -fx-background-color: #fee2e2;
+    -fx-border-color: #fb7185;
+    -fx-text-fill: #be123c;
+}
+
+.sidebar-action-secondary {
+    -fx-background-color: #ede9fe;
+    -fx-border-color: #a855f7;
+    -fx-text-fill: #4c1d95;
+}
+
+.sidebar-action-tertiary {
+    -fx-background-color: linear-gradient(to right, #fee2f2, #ede9fe);
+    -fx-border-color: #a855f7;
+    -fx-text-fill: #6b21a8;
+}
+
+.sidebar-action-primary:hover {
+    -fx-background-color: #fecaca;
+}
+
+.sidebar-action-secondary:hover {
+    -fx-background-color: #ddd6fe;
+}
+
+.sidebar-action-tertiary:hover {
+    -fx-background-color: linear-gradient(to right, #fecdd3, #ddd6fe);
+}
+
+/* Contacts list */
+#contactsListView {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 0 0 8 0;
+}
+
+#contactsListView .list-cell {
+    -fx-padding: 10px 14px;
+    -fx-background-color: transparent;
+    -fx-text-fill: #111827;
+    -fx-font-size: 13px;
+}
+
+#contactsListView .list-cell:filled:selected {
+    -fx-background-color: linear-gradient(to right, #fee2e2, #ede9fe);
+}
+
+#contactsListView .list-cell:filled:hover {
+    -fx-background-color: #fee2e2;
+}

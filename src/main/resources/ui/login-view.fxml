@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.geometry.Pos?>
+<?import javafx.scene.text.Font?>
+
+<StackPane xmlns="http://javafx.com/javafx"
+           xmlns:fx="http://javafx.com/fxml"
+           fx:controller="org.example.peer_chat.ui.controllers.LoginController"
+           stylesheets="@../css/login-view.css"
+           styleClass="login-root">
+
+    <!-- Layer animation: floating cats/rabbits -->
+    <Pane fx:id="floatingLayer" pickOnBounds="false" mouseTransparent="true"/>
+
+    <!-- Layer animation: stars -->
+    <Pane fx:id="starLayer" pickOnBounds="false" mouseTransparent="true"/>
+
+    <!-- Card -->
+    <VBox styleClass="login-card" alignment="CENTER" spacing="16" maxWidth="420">
+        <padding>
+            <Insets top="28" right="28" bottom="28" left="28"/>
+        </padding>
+
+        <!-- Title -->
+        <HBox alignment="CENTER" spacing="10">
+            <Label text="CatChatRabbit.App" styleClass="login-title"/>
+        </HBox>
+
+        <!-- Cute emojis row -->
+        <HBox alignment="CENTER" spacing="14">
+            <Label fx:id="catEmoji" text="🐱" styleClass="big-emoji clickable"/>
+            <Label fx:id="heartEmoji" text="💕" styleClass="mid-emoji"/>
+            <Label fx:id="rabbitEmoji" text="🐰" styleClass="big-emoji clickable"/>
+        </HBox>
+
+        <!-- Form -->
+        <VBox spacing="12" alignment="CENTER">
+
+            <TextField fx:id="usernameField"
+                       promptText="Tên đăng nhập ✨"
+                       styleClass="login-input login-input-username"/>
+
+            <PasswordField fx:id="passwordField"
+                           promptText="Mật khẩu 🔒"
+                           styleClass="login-input login-input-password"/>
+
+            <!-- Confirm password (only when register) -->
+            <VBox fx:id="confirmBox" spacing="8">
+                <PasswordField fx:id="confirmPasswordField"
+                               promptText="Xác nhận mật khẩu 💖"
+                               styleClass="login-input login-input-confirm"/>
+            </VBox>
+
+            <Button fx:id="submitBtn"
+                    text="🐱 Đăng nhập thôi!"
+                    onAction="#onSubmit"
+                    styleClass="login-submit"/>
+
+        </VBox>
+
+        <!-- Toggle -->
+        <Button fx:id="toggleBtn"
+                text="🐰 Chưa có tài khoản? Đăng ký"
+                onAction="#onToggleMode"
+                styleClass="login-toggle"/>
+    </VBox>
+
+</StackPane>
