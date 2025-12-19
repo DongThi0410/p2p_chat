@@ -54,7 +54,7 @@ public class VoiceCallController {
         callTypeLabel.setText("Cuộc gọi thoại ");
 
         // Set button actions
-//        endCallButton.setOnAction(e -> endCall());
+        // endCallButton.setOnAction(e -> endCall());
         muteButton.setOnAction(e -> toggleMute());
         acceptCallButton.setOnAction(e -> {
             try {
@@ -64,21 +64,21 @@ public class VoiceCallController {
             } catch (LineUnavailableException ex) {
                 throw new RuntimeException(ex);
             }
-        });        rejectCallButton.setOnAction(e -> rejectIncomingCall());
+        });
+        rejectCallButton.setOnAction(e -> rejectIncomingCall());
 
         // Đảm bảo endCallButton luôn visible và enabled khi cần
         endCallButton.setVisible(true);
         endCallButton.setDisable(false); // Disable ban đầu, sẽ enable khi inCall
 
         //
-        endCallButton.setOnMouseClicked(e ->
-                System.out.println("END BUTTON MOUSE CLICK")
-        );
+        endCallButton.setOnMouseClicked(e -> System.out.println("END BUTTON MOUSE CLICK"));
         rejectCallButton.setOnMouseClicked(e -> {
             System.out.println("🔥 REJECT BUTTON RAW MOUSE CLICK");
         });
 
     }
+
     @FXML
     private void onAccept() throws SocketException, LineUnavailableException {
         System.out.println("[VoiceCall] Accept pressed for " + remoteName);
@@ -151,7 +151,6 @@ public class VoiceCallController {
         closeWindow();
     }
 
-
     @FXML
     public void endCall() throws SocketException, LineUnavailableException {
         if (peerHandle == null) {
@@ -166,14 +165,19 @@ public class VoiceCallController {
     @FXML
     private void toggleMute() {
         isMuted = !isMuted;
+        muteButton.setText(isMuted ? "🔇" : "🔈");
+        // Also toggle active class if needed for other styling, but text change is
+        // primary for uniformity
         muteButton.getStyleClass().removeAll("active");
         if (isMuted) {
             muteButton.getStyleClass().add("active");
         }
     }
+
     public long getDurationSeconds() {
         return durationInSeconds;
     }
+
     private void startCallTimer() {
         stopCallTimer();
         durationInSeconds = 0;
@@ -233,7 +237,6 @@ public class VoiceCallController {
 
     }
 
-
     private void resetCallUI() {
         isInCall = false;
         remoteName = null;
@@ -276,6 +279,7 @@ public class VoiceCallController {
             activeInstance = null;
         }
     }
+
     /**
      * Called from outside (MainController) when remote side sends CALL_END.
      * Ensures the active voice call window is closed on the callee/caller side as

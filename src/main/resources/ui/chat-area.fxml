@@ -35,6 +35,12 @@
                 <Label fx:id="contactStatus" text="✨ Đang hoạt động" styleClass="chat-header-status" />
             </VBox>
 
+            <!-- Spacer and group management buttons -->
+            <Pane HBox.hgrow="ALWAYS"/>
+            <Button fx:id="manageMembersButton" text="Members" onAction="#onManageMembers"/>
+            <Button fx:id="renameButton"  text="Rename"  onAction="#onRenameGroup"/>
+            <Button fx:id="leaveButton"   text="Leave"   onAction="#onLeaveGroup"/>
+
             <!-- Spacer -->
             <Region HBox.hgrow="ALWAYS" />
 

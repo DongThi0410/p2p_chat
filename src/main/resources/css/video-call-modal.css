@@ -11,7 +11,8 @@
 /* Remote video big blue card in center */
 .remote-video-container {
     -fx-padding: 24;
-    -fx-background-color: #bfdbfe; /* light blue */
+    -fx-background-color: #bfdbfe;
+    /* light blue */
     -fx-background-radius: 32;
     -fx-border-radius: 32;
 }
@@ -65,7 +66,7 @@
     -fx-border-radius: 16;
     -fx-border-color: #f9a8d4;
     -fx-border-width: 3;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.18), 18, 0.25, 0, 4);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.18), 18, 0.25, 0, 4);
 }
 
 .local-video-label {
@@ -78,33 +79,62 @@
     -fx-spacing: 20;
 }
 
+/* Neo-morphism dark buttons inspired by the provided web CSS */
 .call-btn {
+    /* Remove fixed size to allow padding to take effect */
+    /*
     -fx-min-width: 68px;
     -fx-min-height: 68px;
     -fx-max-width: 68px;
     -fx-max-height: 68px;
-    -fx-background-radius: 999;
-    -fx-border-radius: 999;
-    -fx-font-size: 24px;
+    */
+    -fx-background-radius: 1.1em;
+    -fx-border-radius: 1.1em;
+    -fx-font-size: 20px;
     -fx-font-weight: bold;
-    -fx-border-width: 3;
     -fx-text-fill: white;
+    -fx-cursor: hand;
+    -fx-padding: 1em 2em;
+
+    /* Simulating light source with gradient since we can't have 2 shadows */
+    -fx-background-color: linear-gradient(to bottom right, #2b2b2b, #161616);
+    -fx-border-color: transparent;
+
+    /* Single dark shadow for depth */
+    -fx-effect: dropshadow(gaussian, #000000, 15, 0.3, 10, 10);
 }
 
+/* Accent colors per button type */
 .call-btn-mute,
 .call-btn-video,
 .call-btn-screen {
-    -fx-background-color: #60a5fa; /* xanh dương */
-    -fx-border-color: #2563eb;
+    /* dùng text/icon trắng trên nền tối, không đổi màu nền mặc định */
 }
 
 .call-btn-end {
-    -fx-background-color: #f87171;
-    -fx-border-color: #ef4444;
-    -fx-text-fill: white;
+    /* Disable red background to match requested uniform style */
+    /* -fx-background-color: #f97373; */
 }
 
+.call-btn-accept {
+    -fx-text-fill: #4ade80;
+}
+
+.call-btn-reject {
+    -fx-text-fill: #f87171;
+}
+
+/* Hover: Increase shadow depth */
 .call-btn:hover {
-    -fx-scale-x: 1.05;
-    -fx-scale-y: 1.05;
+    -fx-effect: dropshadow(gaussian, #000000, 20, 0.4, 12, 12);
+}
+
+/* Pressed: active state - Glow effect + Fuchsia bg */
+.call-btn:pressed {
+    -fx-background-color: #ff00ff;
+    /* fuchsia */
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+    /* Inner shadow to look pressed + outer glow */
+    -fx-effect: dropshadow(gaussian, #ff00ff, 25, 0.5, 0, 0);
 }

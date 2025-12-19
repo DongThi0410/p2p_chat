@@ -8,8 +8,8 @@
 
 <StackPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
            fx:controller="org.example.peer_chat.ui.controllers.VoiceCallController"
-           stylesheets="@../css/voice-call.css"
-           styleClass="voice-call-root">
+           stylesheets="@../css/video-call-modal.css"
+           styleClass="call-root">
     <BorderPane styleClass="call-background"
                 mouseTransparent="true"/>
     <!-- Full-screen gradient background -->
@@ -72,7 +72,7 @@
 
                 <!-- In-call controls (shown khi đang trong cuộc gọi) -->
                 <Button fx:id="muteButton" text="🔈" onAction="#toggleMute" styleClass="call-btn call-btn-mute"/>
-                <Button fx:id="endCallButton" onAction="#endCall" text="Kết thúc"/>
+                <Button fx:id="endCallButton" onAction="#endCall" text="✖" styleClass="call-btn call-btn-end"/>
             </HBox>
         </bottom>
 

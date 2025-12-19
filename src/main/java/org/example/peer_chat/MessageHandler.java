@@ -46,6 +46,23 @@ public class MessageHandler {
                 String sender = dis.readUTF();
                 String content = dis.readUTF();
                 if (msgCallback != null) msgCallback.onMessage(sender, content);
+            } else if ("FILEG".equals(type)) {
+                String sender = dis.readUTF();
+                String groupId = dis.readUTF();
+                String filename = dis.readUTF();
+                long fileSize = dis.readLong();
+                if (msgCallback != null) msgCallback.onMessage(sender, "GROUP_FILE|" + groupId + "|" + filename);
+                File outFile = new File("received_" + System.currentTimeMillis() + "_" + filename);
+                try (FileOutputStream fos = new FileOutputStream(outFile)) {
+                    byte[] buf = new byte[4096];
+                    long received = 0;
+                    int read;
+                    while (received < fileSize && (read = dis.read(buf)) != -1) {
+                        fos.write(buf, 0, read);
+                        received += read;
+                    }
+                }
+                if (fileCallback != null) fileCallback.onFileReceived(sender, filename, outFile.getAbsolutePath(), fileSize);
             } else if ("FILE".equals(type)) {
                 String sender = dis.readUTF();
                 String filename = dis.readUTF();
@@ -113,6 +130,32 @@ public class MessageHandler {
             }
             dos.flush();
             System.out.println("[File sent] " + file.getName() + " (" + file.length() + " bytes)");
+        }
+    }
+
+    public void sendGroupFile(String address, String filePath, String groupId) throws IOException {
+        String[] p = address.split(":", 2);
+        if (p.length != 2) throw new IOException("Bad address: " + address);
+        File file = new File(filePath);
+        if (!file.exists()) throw new IOException("File not found: " + filePath);
+
+        try (Socket socket = new Socket(p[0], Integer.parseInt(p[1]));
+             DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+             FileInputStream fis = new FileInputStream(file)) {
+
+            dos.writeUTF("FILEG");
+            dos.writeUTF(selfName);
+            dos.writeUTF(groupId);
+            dos.writeUTF(file.getName());
+            dos.writeLong(file.length());
+
+            byte[] buffer = new byte[4096];
+            int bytes;
+            while ((bytes = fis.read(buffer)) != -1) {
+                dos.write(buffer, 0, bytes);
+            }
+            dos.flush();
+            System.out.println("[Group file sent] " + file.getName() + " (" + file.length() + " bytes) to group " + groupId);
         }
     }
 

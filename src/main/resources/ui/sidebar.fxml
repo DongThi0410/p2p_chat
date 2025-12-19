@@ -41,7 +41,12 @@
     </HBox>
 
     <!-- Contacts List -->
-    <ListView fx:id="contactsListView" onMouseClicked="#onSelectContact" prefHeight="400">
+    <Label text="Friends" styleClass="sidebar-section-title" />
+    <ListView fx:id="contactsListView" onMouseClicked="#onSelectContact" prefHeight="220">
         <!-- type HBox -->
     </ListView>
+
+    <!-- Groups List -->
+    <Label text="Groups" styleClass="sidebar-section-title" />
+    <ListView fx:id="groupsListView" onMouseClicked="#onSelectGroup" prefHeight="160" />
 </VBox>

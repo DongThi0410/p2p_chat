@@ -7,6 +7,7 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -20,6 +21,7 @@ import org.example.peer_chat.MessageListener;
 import org.example.peer_chat.PeerHandle;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +49,9 @@ public class MainController implements MessageListener {
     private PeerHandle peerHandle;
     private Runnable onLogout;
 
+    // Map groupName -> groupId (tạm thời, giả định tên nhóm là duy nhất trên 1 máy)
+    private final Map<String, String> groupNameToId = new HashMap<>();
+
     public void init(PeerHandle peer, String currentUser, ChatDb chatDb) {
         this.peer = peer;
         this.currentUser = currentUser;
@@ -60,7 +65,10 @@ public class MainController implements MessageListener {
         if (sidebarRootController != null && peer != null) {
             // Đúng: truyền chatDb để SidebarController tự load all users
             sidebarRootController.init(currentUser, null, chatDb);
+            // Truyền PeerHandle để SidebarController dùng cho Create Group
+            sidebarRootController.setPeer(peer);
             sidebarRootController.setOnContactSelected(this::onContactSelected);
+            sidebarRootController.setOnGroupSelected(this::onGroupSelected);
             sidebarRootController.setOnLogout(() -> {
                 // Xóa user khỏi peer list
                 if (peer != null) {
@@ -70,7 +78,6 @@ public class MainController implements MessageListener {
 
                 // Chuyển màu offline
                 sidebarRootController.updateUserStatus(currentUser, false);
-
 
                 // Gọi callback từ AppTestUI để quay về login
                 if (onLogout != null) {
@@ -83,6 +90,17 @@ public class MainController implements MessageListener {
         // register listener to receive events from core and push to UI controllers
         if (peer != null) {
             peer.setListener(this);
+        }
+
+        // Sau khi sidebar được init, load các group đã tham gia từ DB để hiển thị ngay
+        // khi online
+        if (chatDb != null && sidebarRootController != null) {
+            List<org.example.peer_chat.GroupInfo> groups = chatDb.loadGroupsForUser(currentUser);
+            groupNameToId.clear();
+            for (org.example.peer_chat.GroupInfo g : groups) {
+                groupNameToId.put(g.getName(), g.getId());
+            }
+            sidebarRootController.setGroups(new ArrayList<>(groupNameToId.keySet()));
         }
     }
 
@@ -105,6 +123,20 @@ public class MainController implements MessageListener {
         }
     }
 
+    /**
+     * Được gọi khi người dùng chọn một group ở sidebar.
+     */
+    private void onGroupSelected(String groupName) {
+        String groupId = groupNameToId.get(groupName);
+        if (groupId == null) {
+            System.out.println("[MainController] Unknown group selected: " + groupName);
+            return;
+        }
+
+        if (chatAreaRootController != null && peer != null && chatDb != null) {
+            chatAreaRootController.initGroup(peer, currentUser, groupId, groupName, chatDb);
+        }
+    }
 
     @Override
     public void onMessage(String sender, String msg) {
@@ -120,6 +152,15 @@ public class MainController implements MessageListener {
         Platform.runLater(() -> {
             if (chatAreaRootController != null) {
                 chatAreaRootController.onIncomingFile(sender, filename, absolutePath, size);
+            }
+        });
+    }
+
+    @Override
+    public void onGroupFileReceived(String groupId, String from, String filename, String path, long size) {
+        Platform.runLater(() -> {
+            if (chatAreaRootController != null) {
+                chatAreaRootController.onIncomingGroupFile(groupId, from, filename, path, size);
             }
         });
     }
@@ -150,7 +191,8 @@ public class MainController implements MessageListener {
             // Đóng popup nhận cuộc gọi (nếu có)
             closeReceiveCallWindow();
 
-            // Ưu tiên để ChatAreaController cập nhật window "Đang gọi..." thành "Đang trong cuộc gọi"
+            // Ưu tiên để ChatAreaController cập nhật window "Đang gọi..." thành "Đang trong
+            // cuộc gọi"
             // để KHÔNG mở thêm 1 cửa sổ voice call mới cho bên gọi.
             if (chatAreaRootController != null) {
                 chatAreaRootController.onCallAccepted(peerName);
@@ -169,7 +211,8 @@ public class MainController implements MessageListener {
             // Đóng popup nhận cuộc gọi (nếu có)
             closeReceiveCallWindow();
 
-            // Ưu tiên cho ChatAreaController cập nhật window "Đang gọi..." thành "Đang trong cuộc gọi"
+            // Ưu tiên cho ChatAreaController cập nhật window "Đang gọi..." thành "Đang
+            // trong cuộc gọi"
             // để KHÔNG mở thêm 1 cửa sổ video call mới cho bên gọi.
             if (chatAreaRootController != null) {
                 chatAreaRootController.onCallAccepted(peerName);
@@ -198,8 +241,8 @@ public class MainController implements MessageListener {
                         currentUser,
                         peerName,
                         startTs, // start timestamp
-                        duration,      // duration seconds
-                        true,          // success
+                        duration, // duration seconds
+                        true, // success
                         callIsVideo.getOrDefault(peerName, false) // voice/video
                 );
                 chatDb.insertCallRecord(record);
@@ -228,10 +271,9 @@ public class MainController implements MessageListener {
                         currentUser,
                         peerName,
                         startTs,
-                        0,       // duration 0 giây vì bị từ chối
-                        false,   // success = false
-                        callIsVideo.getOrDefault(peerName, false)
-                );
+                        0, // duration 0 giây vì bị từ chối
+                        false, // success = false
+                        callIsVideo.getOrDefault(peerName, false));
                 chatDb.insertCallRecord(record);
             }
 
@@ -262,6 +304,143 @@ public class MainController implements MessageListener {
         });
     }
 
+    // ====== GROUP CHAT CALLBACKS (INVITE / CREATE / MSG) ======
+
+    @Override
+    public void onGroupInviteReceived(String groupId, String groupName, String owner, List<String> members) {
+        Platform.runLater(() -> {
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "", ButtonType.OK, ButtonType.CANCEL);
+            alert.setTitle("Lời mời tham gia nhóm");
+            alert.setHeaderText(owner + " mời bạn vào nhóm \"" + groupName + "\"");
+            alert.setContentText("Thành viên: " + String.join(", ", members));
+
+            Button ok = (Button) alert.getDialogPane().lookupButton(ButtonType.OK);
+            Button cancel = (Button) alert.getDialogPane().lookupButton(ButtonType.CANCEL);
+            ok.setText("Đồng ý");
+            cancel.setText("Từ chối");
+
+            alert.showAndWait().ifPresent(result -> {
+                if (peer == null)
+                    return;
+                if (result == ButtonType.OK) {
+                    peer.sendToByName(owner, "GROUP_INVITE_ACCEPT|" + groupId + "|" + currentUser);
+                } else {
+                    peer.sendToByName(owner, "GROUP_INVITE_REJECT|" + groupId + "|" + currentUser);
+                }
+            });
+        });
+    }
+
+    @Override
+    public void onGroupCreated(String groupId, String groupName, String owner, List<String> members) {
+        Platform.runLater(() -> {
+            // Lưu lại mapping groupName -> groupId và cập nhật sidebar
+            groupNameToId.put(groupName, groupId);
+            if (sidebarRootController != null) {
+                sidebarRootController.setGroups(new ArrayList<>(groupNameToId.keySet()));
+            }
+
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Nhóm mới");
+            alert.setHeaderText("Đã tạo nhóm \"" + groupName + "\"");
+            alert.setContentText("Thành viên: " + String.join(", ", members));
+            alert.showAndWait();
+        });
+    }
+
+    @Override
+    public void onGroupMessage(String groupId, String from, String content) {
+        Platform.runLater(() -> {
+            if (chatAreaRootController != null) {
+                chatAreaRootController.onIncomingGroupMessage(groupId, from, content);
+            }
+        });
+    }
+
+    @Override
+    public void onGroupMemberLeft(String groupId, String member) {
+        Platform.runLater(() -> {
+            if (chatDb != null) {
+                chatDb.insertGroupMessage(groupId, "SYSTEM", member + " đã rời nhóm");
+            }
+            if (member.equals(currentUser)) {
+                String oldName = null;
+                for (Map.Entry<String, String> e : groupNameToId.entrySet()) {
+                    if (e.getValue().equals(groupId)) {
+                        oldName = e.getKey();
+                        break;
+                    }
+                }
+                if (oldName != null) {
+                    groupNameToId.remove(oldName);
+                    if (sidebarRootController != null) {
+                        sidebarRootController.setGroups(new ArrayList<>(groupNameToId.keySet()));
+                    }
+                }
+            }
+            if (chatAreaRootController != null) {
+                chatAreaRootController.onGroupSystemMessage(groupId, member + " đã rời nhóm");
+            }
+        });
+    }
+
+    @Override
+    public void onGroupRenamed(String groupId, String newName) {
+        Platform.runLater(() -> {
+            if (chatDb != null) {
+                chatDb.insertGroupMessage(groupId, "SYSTEM", "Tên nhóm đã đổi thành \"" + newName + "\"");
+            }
+            String oldName = null;
+            for (Map.Entry<String, String> e : groupNameToId.entrySet()) {
+                if (e.getValue().equals(groupId)) {
+                    oldName = e.getKey();
+                    break;
+                }
+            }
+            if (oldName != null) {
+                groupNameToId.remove(oldName);
+            }
+            groupNameToId.put(newName, groupId);
+            if (sidebarRootController != null) {
+                sidebarRootController.setGroups(new ArrayList<>(groupNameToId.keySet()));
+            }
+            if (chatAreaRootController != null) {
+                chatAreaRootController.updateGroupHeader(newName);
+            }
+            if (chatAreaRootController != null) {
+                chatAreaRootController.onGroupSystemMessage(groupId, "Tên nhóm đã đổi thành \"" + newName + "\"");
+            }
+        });
+    }
+
+    @Override
+    public void onGroupMembersChanged(String groupId) {
+        Platform.runLater(() -> {
+            if (chatDb == null)
+                return;
+            List<String> members = chatDb.getGroupMembers(groupId);
+            if (!members.contains(currentUser)) {
+                String oldName = null;
+                for (Map.Entry<String, String> e : groupNameToId.entrySet()) {
+                    if (e.getValue().equals(groupId)) {
+                        oldName = e.getKey();
+                        break;
+                    }
+                }
+                if (oldName != null) {
+                    groupNameToId.remove(oldName);
+                    if (sidebarRootController != null) {
+                        sidebarRootController.setGroups(new ArrayList<>(groupNameToId.keySet()));
+                    }
+                }
+                return;
+            }
+            chatDb.insertGroupMessage(groupId, "SYSTEM", "Danh sách thành viên nhóm đã được cập nhật");
+            if (chatAreaRootController != null) {
+                chatAreaRootController.onGroupSystemMessage(groupId, "Danh sách thành viên nhóm đã được cập nhật");
+            }
+        });
+    }
 
     private void startSidebarAutoRefresh() {
         Thread t = new Thread(() -> {
@@ -287,7 +466,6 @@ public class MainController implements MessageListener {
 
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/ui/ReceiveCall.fxml"));
             Parent root = loader.load();
-
 
             receiveCallStage = new Stage();
             receiveCallStage.initModality(Modality.APPLICATION_MODAL);

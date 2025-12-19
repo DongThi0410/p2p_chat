@@ -47,10 +47,44 @@ public class ChatDb {
                 + "accepted INTEGER"
                 + ");";
 
+        String sqlGroups = "CREATE TABLE IF NOT EXISTS groups ("
+                + "id TEXT PRIMARY KEY,"
+                + "name TEXT NOT NULL,"
+                + "owner TEXT NOT NULL"
+                + ");";
+
+        String sqlGroupMembers = "CREATE TABLE IF NOT EXISTS group_members ("
+                + "group_id TEXT NOT NULL,"
+                + "member_name TEXT NOT NULL,"
+                + "PRIMARY KEY (group_id, member_name),"
+                + "FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE"
+                + ");";
+
+        String sqlGroupMessages = "CREATE TABLE IF NOT EXISTS group_messages ("
+                + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                + "group_id TEXT NOT NULL,"
+                + "from_user TEXT NOT NULL,"
+                + "content TEXT NOT NULL,"
+                + "ts INTEGER NOT NULL"
+                + ");";
+
+        String sqlGroupFiles = "CREATE TABLE IF NOT EXISTS group_files ("
+                + "id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                + "group_id TEXT NOT NULL,"
+                + "from_user TEXT NOT NULL,"
+                + "filename TEXT NOT NULL,"
+                + "file_path TEXT NOT NULL,"
+                + "ts INTEGER NOT NULL"
+                + ");";
+
         try (Connection c = DriverManager.getConnection(url); Statement s = c.createStatement()) {
             s.execute(sqlMessages);
             s.execute(sqlCalls);
             s.execute(sqlUser);
+            s.execute(sqlGroups);
+            s.execute(sqlGroupMembers);
+            s.execute(sqlGroupMessages);
+            s.execute(sqlGroupFiles);
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -118,7 +152,9 @@ public class ChatDb {
     public List<String> getAllUsers() {
         List<String> users = new ArrayList<>();
         String sql = "SELECT username FROM users";
-        try (Connection c = DriverManager.getConnection(url); Statement s = c.createStatement(); ResultSet rs = s.executeQuery(sql)) {
+        try (Connection c = DriverManager.getConnection(url);
+                Statement s = c.createStatement();
+                ResultSet rs = s.executeQuery(sql)) {
             while (rs.next()) {
                 users.add(rs.getString("username"));
             }
@@ -135,8 +171,8 @@ public class ChatDb {
             p.setString(1, record.getFromUser());
             p.setString(2, record.getToUser());
             p.setInt(3, record.isVideo() ? 1 : 0);
-            p.setLong(4, record.getTimestamp());    // startTs
-            p.setLong(5, record.getDuration());     // duration in seconds
+            p.setLong(4, record.getTimestamp()); // startTs
+            p.setLong(5, record.getDuration()); // duration in seconds
             p.setInt(6, record.isSuccess() ? 1 : 0); // success -> accepted
             p.executeUpdate();
         } catch (SQLException e) {
@@ -202,5 +238,219 @@ public class ChatDb {
             e.printStackTrace();
         }
         return out;
+    }
+
+    // ==== Group chat helpers ====
+
+    public void insertGroup(String groupId, String name, String owner) {
+        String sql = "INSERT OR REPLACE INTO groups (id, name, owner) VALUES (?,?,?)";
+        try (Connection c = DriverManager.getConnection(url); PreparedStatement p = c.prepareStatement(sql)) {
+            p.setString(1, groupId);
+            p.setString(2, name);
+            p.setString(3, owner);
+            p.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void insertGroupMembers(String groupId, List<String> members) {
+        String sql = "INSERT OR REPLACE INTO group_members (group_id, member_name) VALUES (?,?)";
+        try (Connection c = DriverManager.getConnection(url);
+                PreparedStatement p = c.prepareStatement(sql)) {
+            for (String m : members) {
+                p.setString(1, groupId);
+                p.setString(2, m);
+                p.addBatch();
+            }
+            p.executeBatch();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void deleteGroup(String groupId) {
+        String sql = "DELETE FROM groups WHERE id=?";
+        try (Connection c = DriverManager.getConnection(url); PreparedStatement p = c.prepareStatement(sql)) {
+            p.setString(1, groupId);
+            p.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public List<String> getGroupMembers(String groupId) {
+        List<String> members = new ArrayList<>();
+        String sql = "SELECT member_name FROM group_members WHERE group_id=?";
+        try (Connection c = DriverManager.getConnection(url); PreparedStatement p = c.prepareStatement(sql)) {
+            p.setString(1, groupId);
+            try (ResultSet rs = p.executeQuery()) {
+                while (rs.next()) {
+                    members.add(rs.getString(1));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return members;
+    }
+
+    public String getGroupOwner(String groupId) {
+        String sql = "SELECT owner FROM groups WHERE id = ?";
+        try (Connection c = DriverManager.getConnection(url);
+                PreparedStatement p = c.prepareStatement(sql)) {
+            p.setString(1, groupId);
+            try (ResultSet rs = p.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("owner");
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    // Xóa 1 thành viên khỏi group
+    public void removeGroupMember(String groupId, String member) {
+        String sql = "DELETE FROM group_members WHERE group_id=? AND member_name=?";
+        try (Connection c = DriverManager.getConnection(url);
+                PreparedStatement p = c.prepareStatement(sql)) {
+            p.setString(1, groupId);
+            p.setString(2, member);
+            p.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // Xóa group nếu không còn thành viên nào
+    public void deleteGroupIfEmpty(String groupId) {
+        String sql = "SELECT COUNT(*) FROM group_members WHERE group_id=?";
+        try (Connection c = DriverManager.getConnection(url);
+                PreparedStatement p = c.prepareStatement(sql)) {
+            p.setString(1, groupId);
+            try (ResultSet rs = p.executeQuery()) {
+                if (rs.next() && rs.getInt(1) == 0) {
+                    deleteGroup(groupId);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // Đổi tên group
+    public void renameGroup(String groupId, String newName) {
+        String sql = "UPDATE groups SET name=? WHERE id=?";
+        try (Connection c = DriverManager.getConnection(url);
+                PreparedStatement p = c.prepareStatement(sql)) {
+            p.setString(1, newName);
+            p.setString(2, groupId);
+            p.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // ==== Group message history ====
+
+    public void insertGroupMessage(String groupId, String fromUser, String content) {
+        String sql = "INSERT INTO group_messages (group_id, from_user, content, ts) VALUES (?,?,?,?)";
+        try (Connection c = DriverManager.getConnection(url); PreparedStatement p = c.prepareStatement(sql)) {
+            p.setString(1, groupId);
+            p.setString(2, fromUser);
+            p.setString(3, content);
+            p.setLong(4, System.currentTimeMillis());
+            p.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public List<Message> loadGroupMessagesAsc(String groupId, int limit) {
+        List<Message> out = new ArrayList<>();
+        String sql = "SELECT from_user, content, ts FROM group_messages WHERE group_id=? ORDER BY ts ASC LIMIT ?";
+        try (Connection c = DriverManager.getConnection(url); PreparedStatement p = c.prepareStatement(sql)) {
+            p.setString(1, groupId);
+            p.setInt(2, limit);
+            try (ResultSet rs = p.executeQuery()) {
+                while (rs.next()) {
+                    String from = rs.getString(1);
+                    String content = rs.getString(2);
+                    long ts = rs.getLong(3);
+                    // toUser = null, isFile=false, filePath=null cho group message
+                    Message m = new Message(from, null, content, false, null);
+                    m.setTimestamp(ts);
+                    out.add(m);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return out;
+    }
+
+    // ==== Group file / image / voice history ====
+
+    public void insertGroupFile(String groupId, String fromUser, String filename, String filePath) {
+        String sql = "INSERT INTO group_files (group_id, from_user, filename, file_path, ts) VALUES (?,?,?,?,?)";
+        try (Connection c = DriverManager.getConnection(url); PreparedStatement p = c.prepareStatement(sql)) {
+            p.setString(1, groupId);
+            p.setString(2, fromUser);
+            p.setString(3, filename);
+            p.setString(4, filePath);
+            p.setLong(5, System.currentTimeMillis());
+            p.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public List<Message> loadGroupFilesAsc(String groupId, int limit) {
+        List<Message> out = new ArrayList<>();
+        String sql = "SELECT from_user, filename, file_path, ts FROM group_files WHERE group_id=? ORDER BY ts ASC LIMIT ?";
+        try (Connection c = DriverManager.getConnection(url); PreparedStatement p = c.prepareStatement(sql)) {
+            p.setString(1, groupId);
+            p.setInt(2, limit);
+            try (ResultSet rs = p.executeQuery()) {
+                while (rs.next()) {
+                    String from = rs.getString(1);
+                    String filename = rs.getString(2);
+                    String path = rs.getString(3);
+                    long ts = rs.getLong(4);
+                    Message m = new Message(from, null, filename, true, path);
+                    m.setTimestamp(ts);
+                    out.add(m);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return out;
+    }
+
+    /**
+     * Trả về danh sách tất cả group (id,name,owner) mà user này là thành viên.
+     */
+    public List<GroupInfo> loadGroupsForUser(String username) {
+        List<GroupInfo> groups = new ArrayList<>();
+        String sql = "SELECT g.id, g.name, g.owner FROM groups g " +
+                "JOIN group_members gm ON g.id = gm.group_id " +
+                "WHERE gm.member_name = ? ORDER BY g.name ASC";
+        try (Connection c = DriverManager.getConnection(url); PreparedStatement p = c.prepareStatement(sql)) {
+            p.setString(1, username);
+            try (ResultSet rs = p.executeQuery()) {
+                while (rs.next()) {
+                    String id = rs.getString("id");
+                    String name = rs.getString("name");
+                    String owner = rs.getString("owner");
+                    groups.add(new GroupInfo(id, name, owner));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return groups;
     }
 }

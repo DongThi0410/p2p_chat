@@ -4,21 +4,26 @@
 <?import javafx.scene.control.*?>
 
 <BorderPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
-            fx:controller="org.example.peer_chat.ui.controllers.ReceiveCallController">
+            fx:controller="org.example.peer_chat.ui.controllers.ReceiveCallController"
+            stylesheets="@../css/video-call-modal.css"
+            styleClass="call-background">
 
     <!-- Header -->
     <top>
-        <HBox spacing="10" alignment="CENTER_LEFT">
-            <Label text="A đang gọi..." style="-fx-font-size: 18px; -fx-font-weight: bold;" />
+        <HBox spacing="10" alignment="CENTER" style="-fx-padding: 20;">
+            <Label fx:id="statusLabel" text="Cuộc gọi đến..." style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #374151;" />
         </HBox>
     </top>
 
     <!-- Body -->
     <center>
-        <VBox alignment="CENTER" spacing="20">
-            <Label text="A đang gọi cho bạn..." style="-fx-font-size: 16px;" />
-            <Button text="Chấp nhận" onAction="#onAcceptCall" style="-fx-background-color: green; -fx-text-fill: white;" />
-            <Button text="Từ chối" onAction="#rejectIncomingCall" style="-fx-background-color: red; -fx-text-fill: white;" />
+        <VBox alignment="CENTER" spacing="30">
+            <Label fx:id="callerLabel" text="A đang gọi cho bạn..." style="-fx-font-size: 18px; -fx-text-fill: #4b5563;" />
+            
+            <HBox alignment="CENTER" spacing="40">
+                <Button fx:id="acceptButton" text="Chấp nhận" onAction="#onAcceptCall" styleClass="call-btn call-btn-accept" />
+                <Button fx:id="rejectButton" text="Từ chối" onAction="#rejectIncomingCall" styleClass="call-btn call-btn-reject" />
+            </HBox>
         </VBox>
     </center>
 </BorderPane>

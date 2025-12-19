@@ -12,11 +12,13 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import org.example.peer_chat.ChatDb;
+import org.example.peer_chat.PeerHandle;
 
 import java.io.IOException;
 import java.util.*;
@@ -32,6 +34,8 @@ public class SidebarController {
     private Circle statusIndicator;
     @FXML
     private ListView<String> contactsListView;
+    @FXML
+    private ListView<String> groupsListView;
     @FXML
     private TextField searchField;
 
@@ -51,8 +55,10 @@ public class SidebarController {
     private TextField friendIdField;
 
     private String currentUser;
+    private PeerHandle peer;
     private Runnable onLogout;
     private Consumer<String> onContactSelected;
+    private Consumer<String> onGroupSelected;
     private final Map<String, HBox> userRows = new HashMap<>();
     private final Map<String, Boolean> userOnlineStatus = new HashMap<>();
 
@@ -99,6 +105,15 @@ public class SidebarController {
             String kw = newVal == null ? "" : newVal.toLowerCase();
             contactsListView.setItems(allUsers.filtered(u -> u.toLowerCase().contains(kw)));
         });
+
+        // Nhóm: đơn giản hiển thị tên group dạng String, sẽ được MainController cập nhật
+        if (groupsListView != null) {
+            groupsListView.setItems(FXCollections.observableArrayList());
+        }
+    }
+
+    public void setPeer(PeerHandle peer) {
+        this.peer = peer;
     }
 
     private void filterContacts(String keyword) {
@@ -155,6 +170,10 @@ public class SidebarController {
         });
     }
 
+    public void setOnGroupSelected(Consumer<String> onGroupSelected) {
+        this.onGroupSelected = onGroupSelected;
+    }
+
     @FXML
     private void onSearchChanged() {
         String keyword = searchField.getText() == null ? "" : searchField.getText().toLowerCase();
@@ -195,11 +214,74 @@ public class SidebarController {
 
     @FXML
     private void onCreateGroup() {
-        Alert alert = new Alert(AlertType.INFORMATION);
-        alert.setTitle("Create Group");
-        alert.setHeaderText(null);
-        alert.setContentText("Chức năng tạo nhóm sẽ được nối với core sau.");
-        alert.showAndWait();
+        if (peer == null) {
+            Alert alert = new Alert(AlertType.WARNING, "PeerHandle chưa được khởi tạo.");
+            alert.showAndWait();
+            return;
+        }
+
+        // Lấy danh sách user đang online (trừ chính mình)
+        List<String> online = new ArrayList<>();
+        for (Map.Entry<String, Boolean> e : userOnlineStatus.entrySet()) {
+            if (Boolean.TRUE.equals(e.getValue()) && !e.getKey().equals(currentUser)) {
+                online.add(e.getKey());
+            }
+        }
+
+        // Cho phép tạo nhóm ngay cả khi ít người online (owner vẫn có thể chat/lưu)
+
+        // Dialog chọn thành viên + tên nhóm
+        Dialog<List<String>> dialog = new Dialog<>();
+        dialog.setTitle("Tạo nhóm chat");
+        dialog.setHeaderText("Chọn thành viên tham gia nhóm");
+
+        ButtonType createBtnType = new ButtonType("Tạo nhóm", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(createBtnType, ButtonType.CANCEL);
+
+        VBox box = new VBox(8);
+        box.setPadding(new javafx.geometry.Insets(10));
+
+        TextField nameField = new TextField();
+        nameField.setPromptText("Tên nhóm");
+        box.getChildren().addAll(new Label("Tên nhóm:"), nameField, new Label("Thành viên:"));
+
+        List<CheckBox> checkBoxes = new ArrayList<>();
+        for (String u : online) {
+            CheckBox cb = new CheckBox(u);
+            checkBoxes.add(cb);
+            box.getChildren().add(cb);
+        }
+
+        dialog.getDialogPane().setContent(box);
+
+        dialog.setResultConverter(btn -> {
+            if (btn == createBtnType) {
+                List<String> selected = new ArrayList<>();
+                for (CheckBox cb : checkBoxes) {
+                    if (cb.isSelected()) {
+                        selected.add(cb.getText());
+                    }
+                }
+                return selected;
+            }
+            return null;
+        });
+
+        Optional<List<String>> result = dialog.showAndWait();
+        if (result.isEmpty()) return;
+
+        List<String> selectedMembers = result.get();
+        String groupName = nameField.getText() == null ? "" : nameField.getText().trim();
+        if (selectedMembers.size() < 1 || groupName.isEmpty()) {
+            Alert alert = new Alert(AlertType.WARNING);
+            alert.setTitle("Thông tin chưa hợp lệ");
+            alert.setHeaderText(null);
+            alert.setContentText("Tên nhóm không được trống và cần chọn ít nhất 1 thành viên.");
+            alert.showAndWait();
+            return;
+        }
+
+        peer.createGroupWithInvites(groupName, selectedMembers);
     }
 
     @FXML
@@ -229,5 +311,23 @@ public class SidebarController {
         if (selectedContact != null && onContactSelected != null) {
             onContactSelected.accept(selectedContact);
         }
+    }
+
+    @FXML
+    private void onSelectGroup() {
+        String selectedGroup = groupsListView.getSelectionModel().getSelectedItem();
+        if (selectedGroup != null && onGroupSelected != null) {
+            onGroupSelected.accept(selectedGroup);
+        }
+    }
+
+    /**
+     * Cập nhật danh sách group hiển thị ở sidebar (realtime, chưa cần lịch sử DB).
+     */
+    public void setGroups(java.util.List<String> groups) {
+        if (groupsListView == null) return;
+        Platform.runLater(() -> {
+            groupsListView.getItems().setAll(groups);
+        });
     }
 }

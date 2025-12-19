@@ -3,10 +3,15 @@ package org.example.peer_chat;
 import javax.sound.sampled.LineUnavailableException;
 import java.io.IOException;
 import java.net.*;
+import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -23,13 +28,28 @@ public class PeerHandle {
     // cache: peerName -> "ip:tcpPort"
     private final Map<String, String> cachedPeers = new ConcurrentHashMap<>();
 
+    // pending group invites owned by this peer (keyed by groupId)
+    private final Map<String, PendingGroupInvite> pendingGroupInvites = new HashMap<>();
+
     private MessageListener listener;
     private volatile boolean inCall = false;
     private volatile String currentCallPeer = null;
     int localVoicePort;
     int localVideoPort;
-    // lưu tạm videoPort của caller khi nhận CALL_REQUEST_VIDEO, dùng cho acceptVideoCall()
+    // lưu tạm videoPort của caller khi nhận CALL_REQUEST_VIDEO, dùng cho
+    // acceptVideoCall()
     private volatile int pendingCallerVideoPort = -1;
+    private final java.util.concurrent.ConcurrentHashMap<String, String> expectedGroupFiles = new java.util.concurrent.ConcurrentHashMap<>();
+
+    // simple structure to track group invite state on the owner side
+    private static class PendingGroupInvite {
+        String groupId;
+        String groupName;
+        String owner;
+        List<String> candidates;
+        Set<String> accepted = new HashSet<>();
+        Set<String> rejected = new HashSet<>();
+    }
 
     public PeerHandle(String name, ChatDb db) throws IOException {
         this.name = name;
@@ -60,12 +80,13 @@ public class PeerHandle {
             // Nếu đã biết peerName nhưng với địa chỉ khác, bỏ qua để tránh
             // bị nhảy qua lại giữa nhiều instance trùng tên (ổn định hơn).
             if (!old.equals(addr)) {
-                System.out.println("[Discovered peer] duplicate name " + peerName + 
-                        " at " + addr + ", keeping existing " + old);
+                // System.out.println("[Discovered peer] duplicate name " + peerName +
+                // " at " + addr + ", keeping existing " + old);
             }
         });
 
-        System.out.printf("[PeerHandle] %s TCP:%d VOICE:%d VIDEO:%d%n", name, listenPort, localVoicePort, localVideoPort);
+        System.out.printf("[PeerHandle] %s TCP:%d VOICE:%d VIDEO:%d%n", name, listenPort, localVoicePort,
+                localVideoPort);
     }
 
     private VoiceEngine getVoiceEngine() throws LineUnavailableException, SocketException {
@@ -122,8 +143,8 @@ public class PeerHandle {
     }
 
     public void logout() {
-        broadcastOffline();    // gửi tới các peer khác trước
-        removePeer(name);  // xóa khỏi cachedPeers của chính mình
+        broadcastOffline(); // gửi tới các peer khác trước
+        removePeer(name); // xóa khỏi cachedPeers của chính mình
     }
 
     public String lookup(String peerName) {
@@ -149,6 +170,86 @@ public class PeerHandle {
             messageHandler.sendFile(addr, filePath);
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    public void sendGroupFileByName(String peerName, String filePath, String groupId) {
+        String addr = lookup(peerName);
+        if (addr == null) {
+            System.out.println("[sendGroupFile] Peer not found: " + peerName);
+            return;
+        }
+        try {
+            messageHandler.sendGroupFile(addr, filePath, groupId);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    // ===== GROUP CHAT HIGH-LEVEL API (owner side) =====
+
+    /**
+     * Owner gọi hàm này sau khi chọn danh sách bạn bè online để mời vào group.
+     * Yêu cầu: members.size() >= 2 để tổng thành viên (kể cả owner) >= 3.
+     */
+    public String createGroupWithInvites(String groupName, List<String> members) {
+        if (members == null || members.size() < 2) {
+            System.out.println("[Group] Need at least 2 members besides owner to create group");
+            return null;
+        }
+
+        String groupId = UUID.randomUUID().toString();
+        PendingGroupInvite inv = new PendingGroupInvite();
+        inv.groupId = groupId;
+        inv.groupName = groupName;
+        inv.owner = name;
+        inv.candidates = new ArrayList<>(members);
+        pendingGroupInvites.put(groupId, inv);
+
+        String membersCsv = String.join(",", members);
+        String payload = "GROUP_INVITE|" + groupId + "|" + groupName + "|" + name + "|" + membersCsv;
+
+        for (String m : members) {
+            sendToByName(m, payload);
+        }
+
+        // Tạo group local ngay lập tức cho owner để có thể bắt đầu chat/lưu lịch sử
+        db.insertGroup(groupId, groupName, name);
+        java.util.List<String> initialMembers = new java.util.ArrayList<>();
+        initialMembers.add(name); // owner
+        db.insertGroupMembers(groupId, initialMembers);
+        if (listener != null) {
+            listener.onGroupCreated(groupId, groupName, name, initialMembers);
+        }
+
+        System.out.println("[Group] Sent invite for group " + groupName + " to " + membersCsv);
+        return groupId;
+    }
+
+    /**
+     * Gửi tin nhắn trong group: broadcast tới tất cả thành viên (trừ chính mình).
+     */
+    public void sendGroupMessage(String groupId, String content) {
+        // Lấy danh sách thành viên từ DB
+        List<String> members = db.getGroupMembers(groupId);
+        // Lưu tin nhắn local cho chính mình
+        db.insertGroupMessage(groupId, name, content);
+        for (String member : members) {
+            if (member.equals(name))
+                continue; // không gửi lại cho chính mình
+            sendToByName(member, "GROUP_MSG|" + groupId + "|" + name + "|" + content);
+        }
+    }
+
+    public void notifyLocalGroupRenamed(String groupId, String newName) {
+        if (listener != null) {
+            listener.onGroupRenamed(groupId, newName);
+        }
+    }
+
+    public void notifyLocalGroupLeft(String groupId, String member) {
+        if (listener != null) {
+            listener.onGroupMemberLeft(groupId, member);
         }
     }
 
@@ -198,13 +299,15 @@ public class PeerHandle {
 
         // send CALL_REQUEST_VIDEO|callerName|callerIp|callerVoicePort|callerVideoPort
         String myIp = getLocalAddress();
-        String msg = "CALL_REQUEST_VIDEO|" + name + "|" + myIp + "|" + getVoiceEngine().getLocalPort() + "|" + getVideoEngine().getLocalPort();
+        String msg = "CALL_REQUEST_VIDEO|" + name + "|" + myIp + "|" + getVoiceEngine().getLocalPort() + "|"
+                + getVideoEngine().getLocalPort();
         messageHandler.sendText(addr, msg);
         System.out.println("[VideoCall] requested video call to " + peerName + " via " + addr);
     }
 
     // called when user accepts an incoming CALL_REQUEST
-    public void acceptCall(String callerName, String callerIp, int callerVoicePort) throws SocketException, LineUnavailableException {
+    public void acceptCall(String callerName, String callerIp, int callerVoicePort)
+            throws SocketException, LineUnavailableException {
 
         if (inCall)
             return;
@@ -229,7 +332,8 @@ public class PeerHandle {
     }
 
     // called when user accepts an incoming CALL_REQUEST_VIDEO
-    public void acceptVideoCall(String callerName, String callerIp, int callerVoicePort) throws SocketException, LineUnavailableException {
+    public void acceptVideoCall(String callerName, String callerIp, int callerVoicePort)
+            throws SocketException, LineUnavailableException {
         if (inCall)
             return;
 
@@ -240,11 +344,13 @@ public class PeerHandle {
 
         if (addr != null) {
             String myIp = getLocalAddress();
-            String resp = "CALL_ACCEPT_VIDEO|" + name + "|" + myIp + "|" + getVoiceEngine().getLocalPort() + "|" + getVideoEngine().getLocalPort();
+            String resp = "CALL_ACCEPT_VIDEO|" + name + "|" + myIp + "|" + getVoiceEngine().getLocalPort() + "|"
+                    + getVideoEngine().getLocalPort();
             messageHandler.sendText(addr, resp);
         }
 
-        // callerVoicePort là cổng voice của caller, pendingCallerVideoPort là cổng video
+        // callerVoicePort là cổng voice của caller, pendingCallerVideoPort là cổng
+        // video
         int callerVideoPort = pendingCallerVideoPort;
         pendingCallerVideoPort = -1;
 
@@ -309,6 +415,83 @@ public class PeerHandle {
             }
             return;
         }
+
+        // 5) Tin nhắn trong group
+        if (message != null && message.startsWith("GROUP_MSG|")) {
+            String[] p = message.split("\\|", 4);
+            if (p.length >= 4 && listener != null) {
+                String groupId = p[1];
+                String from = p[2];
+                String content = p[3];
+
+                // Lưu lịch sử group
+                db.insertGroupMessage(groupId, from, content);
+
+                listener.onGroupMessage(groupId, from, content);
+            }
+            return;
+        }
+        // ==== GROUP MANAGEMENT ====
+        if (message != null && message.startsWith("GROUP_FILE|")) {
+            String[] p = message.split("\\|", 3);
+            if (p.length >= 3) {
+                String groupId = p[1];
+                String filename = p[2];
+                expectedGroupFiles.put(sender + "|" + filename, groupId);
+            }
+            return;
+        }
+        if (message != null && message.startsWith("GROUP_LEAVE|")) {
+            String[] p = message.split("\\|", 3);
+            if (p.length >= 3) {
+                String groupId = p[1];
+                String member = p[2];
+                db.removeGroupMember(groupId, member);
+                db.deleteGroupIfEmpty(groupId);
+                if (listener != null) {
+                    listener.onGroupMemberLeft(groupId, member);
+                }
+            }
+            return;
+        }
+        if (message != null && message.startsWith("GROUP_RENAME|")) {
+            String[] p = message.split("\\|", 3);
+            if (p.length >= 3) {
+                String groupId = p[1];
+                String newName = p[2];
+                db.renameGroup(groupId, newName);
+                if (listener != null) {
+                    listener.onGroupRenamed(groupId, newName);
+                }
+            }
+            return;
+        }
+        if (message != null && message.startsWith("GROUP_ADD_MEMBER|")) {
+            String[] p = message.split("\\|", 3);
+            if (p.length >= 3) {
+                String groupId = p[1];
+                String membersCsv = p[2];
+                java.util.List<String> members = java.util.Arrays.asList(membersCsv.split(","));
+                db.insertGroupMembers(groupId, members);
+                if (listener != null)
+                    listener.onGroupMembersChanged(groupId);
+            }
+            return;
+        }
+        if (message != null && message.startsWith("GROUP_REMOVE_MEMBER|")) {
+            String[] p = message.split("\\|", 3);
+            if (p.length >= 3) {
+                String groupId = p[1];
+                String membersCsv = p[2];
+                for (String m : membersCsv.split(",")) {
+                    db.removeGroupMember(groupId, m);
+                }
+                db.deleteGroupIfEmpty(groupId);
+                if (listener != null)
+                    listener.onGroupMembersChanged(groupId);
+            }
+            return;
+        }
         if (message != null && message.startsWith("CALL_REQUEST|")) {
             String[] p = message.split("\\|");
             if (p.length == 4) {
@@ -335,7 +518,8 @@ public class PeerHandle {
                 // Lưu lại cổng video của caller để acceptVideoCall() dùng khi start VideoEngine
                 pendingCallerVideoPort = videoPort;
 
-                System.out.println("[VideoCall] incoming request from " + caller + " voicePort=" + voicePort + " videoPort=" + videoPort);
+                System.out.println("[VideoCall] incoming request from " + caller + " voicePort=" + voicePort
+                        + " videoPort=" + videoPort);
 
                 if (listener != null)
                     listener.onIncomingVideoCall(caller, ip, voicePort);
@@ -375,9 +559,11 @@ public class PeerHandle {
                 inCall = true;
                 getVoiceEngine().start(ip, voicePort);
                 getVideoEngine().start(ip, videoPort);
-                System.out.println("[VideoCall] remote accepted. starting video call to " + accepter + "@" + ip + ":" + voicePort + " videoPort=" + videoPort);
+                System.out.println("[VideoCall] remote accepted. starting video call to " + accepter + "@" + ip + ":"
+                        + voicePort + " videoPort=" + videoPort);
 
-                // notify UI so caller side can transition from "Đang gọi..." to VideoCallModal UI
+                // notify UI so caller side can transition from "Đang gọi..." to VideoCallModal
+                // UI
                 if (listener != null)
                     listener.onVideoCallStarted(accepter);
                 return;
@@ -386,7 +572,7 @@ public class PeerHandle {
 
         if (message != null && message.startsWith("CALL_END|")) {
             String[] p = message.split("\\|");
-            if (p.length >= 2) {  // Add length check for safety
+            if (p.length >= 2) { // Add length check for safety
                 String ender = p[1];
                 System.out.println("[Peer] Received CALL_END from " + ender);
 
@@ -404,7 +590,7 @@ public class PeerHandle {
                     listener.onCallEnded(ender);
                 }
             }
-            return;  // Important: return after handling CALL_END
+            return; // Important: return after handling CALL_END
         }
 
         if (message != null && message.startsWith("CALL_REJECT|")) {
@@ -440,16 +626,122 @@ public class PeerHandle {
             return;
         }
 
+        // ==== GROUP CHAT SIGNALING ====
+
+        // 1) Mình nhận lời mời tham gia group
+        if (message != null && message.startsWith("GROUP_INVITE|")) {
+            String[] p = message.split("\\|", 5);
+            if (p.length >= 5 && listener != null) {
+                String groupId = p[1];
+                String groupName = p[2];
+                String owner = p[3];
+                String membersCsv = p[4];
+                List<String> members = java.util.Arrays.asList(membersCsv.split(","));
+
+                listener.onGroupInviteReceived(groupId, groupName, owner, members);
+            }
+            return;
+        }
+
+        // 2) Owner nhận ACCEPT
+        if (message != null && message.startsWith("GROUP_INVITE_ACCEPT|")) {
+            String[] p = message.split("\\|", 3);
+            if (p.length >= 3) {
+                String groupId = p[1];
+                String member = p[2];
+                PendingGroupInvite inv = pendingGroupInvites.get(groupId);
+                if (inv != null) {
+                    inv.accepted.add(member);
+                    maybeFinalizeGroup(inv);
+                }
+            }
+            return;
+        }
+
+        // 3) Owner nhận REJECT
+        if (message != null && message.startsWith("GROUP_INVITE_REJECT|")) {
+            String[] p = message.split("\\|", 3);
+            if (p.length >= 3) {
+                String groupId = p[1];
+                String member = p[2];
+                PendingGroupInvite inv = pendingGroupInvites.get(groupId);
+                if (inv != null) {
+                    inv.rejected.add(member);
+                    maybeFinalizeGroup(inv);
+                }
+            }
+            return;
+        }
+
+        // 4) Group đã được tạo xong (mọi máy tạo bản copy local)
+        if (message != null && message.startsWith("GROUP_CREATE|")) {
+            String[] p = message.split("\\|", 5);
+            if (p.length >= 5) {
+                String groupId = p[1];
+                String groupName = p[2];
+                String owner = p[3];
+                String membersCsv = p[4];
+                List<String> members = java.util.Arrays.asList(membersCsv.split(","));
+
+                db.insertGroup(groupId, groupName, owner);
+                db.insertGroupMembers(groupId, members);
+
+                if (listener != null) {
+                    listener.onGroupCreated(groupId, groupName, owner, members);
+                }
+            }
+            return;
+        }
+
         // normal chat message
         db.insertMessage(new Message(sender, name, message, false, null));
         if (listener != null)
             listener.onMessage(sender, message);
     }
 
+    // Owner side: sau khi nhận đủ ACCEPT/REJECT cho một groupId, quyết định có tạo
+    // group hay huỷ.
+    private void maybeFinalizeGroup(PendingGroupInvite inv) {
+        int totalResponses = inv.accepted.size() + inv.rejected.size();
+        if (totalResponses < inv.candidates.size()) {
+            return; // còn người chưa trả lời
+        }
+
+        // Bổ sung các thành viên đã đồng ý vào group đã tạo sẵn của owner
+        List<String> finalMembers = new ArrayList<>(inv.accepted);
+        finalMembers.add(name); // owner
+        db.insertGroupMembers(inv.groupId,
+                finalMembers.stream().filter(m -> !m.equals(name)).collect(Collectors.toList()));
+
+        String membersCsv = String.join(",", finalMembers);
+        String payload = "GROUP_CREATE|" + inv.groupId + "|" + inv.groupName + "|" + inv.owner + "|" + membersCsv;
+        for (String m : inv.accepted) {
+            sendToByName(m, payload);
+        }
+
+        if (listener != null) {
+            listener.onGroupCreated(inv.groupId, inv.groupName, inv.owner, finalMembers);
+        }
+
+        System.out.println("[Group] Finalized group " + inv.groupName + " with members " + membersCsv);
+
+        pendingGroupInvites.remove(inv.groupId);
+    }
+
     private void onIncomingFile(String sender, String filename, String absPath, long size) {
+        String key = sender + "|" + filename;
+        String groupId = expectedGroupFiles.remove(key);
+        if (groupId != null) {
+            db.insertGroupFile(groupId, sender, filename, absPath);
+            if (listener != null) {
+                listener.onGroupFileReceived(groupId, sender, filename, absPath, size);
+            }
+            return;
+        }
         db.insertMessage(new Message(sender, name, filename, true, absPath));
-        if (listener != null)
+        if (listener != null) {
             listener.onFileReceived(sender, filename, absPath, size);
+        }
     }
 
     public void rejectCall(String callerName) {
@@ -464,7 +756,8 @@ public class PeerHandle {
         messageHandler.stop();
         try {
             serverSocket.close();
-        } catch (IOException ignored) {}
+        } catch (IOException ignored) {
+        }
 
         if (voiceEngine != null) {
             voiceEngine.shutdown();

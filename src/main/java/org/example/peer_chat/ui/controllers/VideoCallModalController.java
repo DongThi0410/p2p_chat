@@ -193,7 +193,8 @@ public class VideoCallModalController {
             }
 
             // Nếu webcam chưa open thì mới set resolution + open.
-            // Giảm độ phân giải xuống 176x144 (kích thước nhỏ nhất được webcam-capture hỗ trợ).
+            // Giảm độ phân giải xuống 176x144 (kích thước nhỏ nhất được webcam-capture hỗ
+            // trợ).
             // Thư viện webcam-capture không cho đổi resolution khi đã open.
             if (!webcam.isOpen()) {
                 webcam.setViewSize(new java.awt.Dimension(176, 144));
@@ -279,7 +280,8 @@ public class VideoCallModalController {
     public static void setRemoteVideoEnabled(boolean enabled) {
         remoteVideoEnabled = enabled;
         VideoCallModalController inst = activeInstance;
-        if (inst == null) return;
+        if (inst == null)
+            return;
 
         Platform.runLater(() -> {
             if (inst.remoteVideoFeed != null) {
@@ -414,14 +416,15 @@ public class VideoCallModalController {
     @FXML
     private void onToggleMute() {
         isMuted = !isMuted;
-        muteButton.setText(isMuted ? "Unmute" : "Mute");
+        muteButton.setText(isMuted ? "🔇" : "🔈");
         // Toggle mute audio in peer handle
     }
 
     @FXML
     private void onToggleVideo() {
         isVideoOff = !isVideoOff;
-        videoButton.setText(isVideoOff ? "Start Video" : "Stop Video");
+        // Use icons to maintain button shape
+        videoButton.setText(isVideoOff ? "📷" : "📹");
 
         // Toggle video feed on/off
         if (isVideoOff) {
@@ -446,7 +449,7 @@ public class VideoCallModalController {
     @FXML
     private void onToggleScreenSharing() {
         isScreenSharing = !isScreenSharing;
-        shareScreenButton.setText(isScreenSharing ? "Stop Screen Sharing" : "Start Screen Sharing");
+        shareScreenButton.setText(isScreenSharing ? "🛑" : "🖥");
         // Handle screen sharing functionality
     }
 

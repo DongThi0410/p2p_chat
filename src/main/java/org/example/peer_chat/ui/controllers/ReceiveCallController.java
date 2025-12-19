@@ -10,12 +10,18 @@ import org.example.peer_chat.PeerHandle;
 import javax.sound.sampled.LineUnavailableException;
 import java.net.SocketException;
 
+import javafx.scene.control.Label;
+
 public class ReceiveCallController {
 
     @FXML
     private Button acceptButton;
     @FXML
     private Button rejectButton;
+    @FXML
+    private Label statusLabel;
+    @FXML
+    private Label callerLabel;
 
     private PeerHandle peerHandle;
     private String callerName;
@@ -30,24 +36,39 @@ public class ReceiveCallController {
         this.callerIp = callerIp;
         this.callerVoicePort = callerVoicePort;
         this.isVideoCall = false;
+        updateUi();
     }
+
     public void setStage(Stage stage) {
         this.stage = stage;
     }
 
-    public void init(PeerHandle peerHandle, String callerName, String callerIp, int callerVoicePort, boolean isVideoCall) {
+    public void init(PeerHandle peerHandle, String callerName, String callerIp, int callerVoicePort,
+            boolean isVideoCall) {
         this.peerHandle = peerHandle;
         this.callerName = callerName;
         this.callerIp = callerIp;
         this.callerVoicePort = callerVoicePort;
         this.isVideoCall = isVideoCall;
+        updateUi();
+    }
+
+    private void updateUi() {
+        if (statusLabel != null) {
+            statusLabel.setText(isVideoCall ? "Cuộc gọi video đến..." : "Cuộc gọi đến...");
+        }
+        if (callerLabel != null) {
+            callerLabel.setText(callerName + " đang gọi cho bạn...");
+        }
     }
 
     @FXML
     public void onAcceptCall(ActionEvent event) throws SocketException, LineUnavailableException {
-        // Chấp nhận cuộc gọi: báo core layer và mở UI voice-call-view hoặc video-call-modal
+        // Chấp nhận cuộc gọi: báo core layer và mở UI voice-call-view hoặc
+        // video-call-modal
         if (peerHandle != null && callerName != null) {
-            System.out.println("[ReceiveCallController] Accept pressed for caller=" + callerName + " (video=" + isVideoCall + ")");
+            System.out.println(
+                    "[ReceiveCallController] Accept pressed for caller=" + callerName + " (video=" + isVideoCall + ")");
             if (isVideoCall) {
                 peerHandle.acceptVideoCall(callerName, callerIp, callerVoicePort);
             } else {
@@ -70,7 +91,6 @@ public class ReceiveCallController {
 
         closeWindow();
     }
-
 
     private void closeWindow() {
         if (stage != null && stage.isShowing()) {
