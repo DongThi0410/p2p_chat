@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.example.peer_chat.SoundManager;
 
 public class MainController implements MessageListener {
 
@@ -140,6 +141,8 @@ public class MainController implements MessageListener {
 
     @Override
     public void onMessage(String sender, String msg) {
+        // Play beep
+        SoundManager.getInstance().playMessageSound();
         Platform.runLater(() -> {
             if (chatAreaRootController != null) {
                 chatAreaRootController.onIncomingMessage(sender, msg);
@@ -158,6 +161,7 @@ public class MainController implements MessageListener {
 
     @Override
     public void onGroupFileReceived(String groupId, String from, String filename, String path, long size) {
+        SoundManager.getInstance().playMessageSound();
         Platform.runLater(() -> {
             if (chatAreaRootController != null) {
                 chatAreaRootController.onIncomingGroupFile(groupId, from, filename, path, size);
@@ -167,6 +171,7 @@ public class MainController implements MessageListener {
 
     @Override
     public void onIncomingCall(String callerName, String callerIp, int callerVoicePort) {
+        SoundManager.getInstance().playIncomingCallSound();
         Platform.runLater(() -> {
             if (chatAreaRootController != null) {
                 chatAreaRootController.setCurrentCallVideo(false);
@@ -177,6 +182,7 @@ public class MainController implements MessageListener {
 
     @Override
     public void onIncomingVideoCall(String callerName, String callerIp, int callerVoicePort) {
+        SoundManager.getInstance().playIncomingCallSound();
         Platform.runLater(() -> {
             if (chatAreaRootController != null) {
                 chatAreaRootController.setCurrentCallVideo(true);
@@ -187,6 +193,7 @@ public class MainController implements MessageListener {
 
     @Override
     public void onVoiceCallStarted(String peerName) {
+        SoundManager.getInstance().stopIncomingCallSound();
         Platform.runLater(() -> {
             // Đóng popup nhận cuộc gọi (nếu có)
             closeReceiveCallWindow();
@@ -207,6 +214,7 @@ public class MainController implements MessageListener {
 
     @Override
     public void onVideoCallStarted(String peerName) {
+        SoundManager.getInstance().stopIncomingCallSound();
         Platform.runLater(() -> {
             // Đóng popup nhận cuộc gọi (nếu có)
             closeReceiveCallWindow();
@@ -350,6 +358,7 @@ public class MainController implements MessageListener {
 
     @Override
     public void onGroupMessage(String groupId, String from, String content) {
+        SoundManager.getInstance().playMessageSound();
         Platform.runLater(() -> {
             if (chatAreaRootController != null) {
                 chatAreaRootController.onIncomingGroupMessage(groupId, from, content);
@@ -484,6 +493,8 @@ public class MainController implements MessageListener {
     }
 
     private void closeReceiveCallWindow() {
+        // Ensure ringing stops if window closed manually (though triggered in onCallEnded too)
+        SoundManager.getInstance().stopIncomingCallSound();
         if (receiveCallStage != null && receiveCallStage.isShowing()) {
             receiveCallStage.close();
             receiveCallStage = null;
