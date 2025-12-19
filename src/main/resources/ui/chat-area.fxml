@@ -12,7 +12,14 @@
            stylesheets="@../css/chat-area.css">
 
     <children>
-        <BorderPane styleClass="chat-root">
+        <!-- Placeholder hiển thị khi chưa chọn cuộc trò chuyện nào -->
+        <VBox fx:id="placeholderRoot" alignment="CENTER" spacing="12" StackPane.alignment="CENTER">
+            <Label text="🐰" styleClass="chat-placeholder-avatar" />
+            <Label text="Chọn một cuộc trò chuyện để bắt đầu 💬" styleClass="chat-placeholder-text" />
+        </VBox>
+
+        <!-- Chat chính: ẩn lúc khởi động, chỉ hiện khi đã chọn contact -->
+        <BorderPane fx:id="chatRootPane" styleClass="chat-root" visible="false" managed="false">
 
     <!-- Chat Header -->
     <top>
@@ -59,8 +66,8 @@
             </padding>
 
             <!-- Left utility buttons: attach / image / emoji -->
-            <Button fx:id="attachButton" text="📎" styleClass="chat-util-btn" />
-            <Button fx:id="imageButton" text="🖼" styleClass="chat-util-btn-blue" />
+            <Button fx:id="attachButton" text="📎" onAction="#onAttachFile" styleClass="chat-util-btn" />
+            <Button fx:id="imageButton" text="🖼" onAction="#onSendImage" styleClass="chat-util-btn-blue" />
             <Button fx:id="emojiButton" text="😊" styleClass="chat-util-btn-yellow" />
 
             <!-- Message field expands -->

@@ -15,11 +15,16 @@ import javafx.util.Duration;
 import javafx.stage.Stage;
 import javafx.application.Platform;
 import org.example.peer_chat.PeerHandle;
+import org.example.peer_chat.VideoEngine;
 import com.github.sarxos.webcam.Webcam;
 import com.github.sarxos.webcam.WebcamException;
 
 import javax.sound.sampled.LineUnavailableException;
+import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.net.SocketException;
 
 public class VideoCallModalController {
@@ -44,6 +49,8 @@ public class VideoCallModalController {
     private Button rejectButton;
     @FXML
     private ImageView localVideoFeed;
+    @FXML
+    private ImageView remoteVideoFeed;
 
     private boolean isMuted = false;
     private boolean isVideoOff = false;
@@ -56,6 +63,7 @@ public class VideoCallModalController {
     private String remoteName;
     private String remoteIp;
     private int remoteVoicePort;
+    private VideoEngine videoEngine;
 
     // Timer for call duration
     private Timeline callDurationTimer;
@@ -113,18 +121,39 @@ public class VideoCallModalController {
                 break;
         }
     }
+
     public void initVideoCall(PeerHandle peerHandle, String remoteName) {
         this.peerHandle = peerHandle;
         this.remoteName = remoteName;
 
-        init("video");          // 🔥 QUAN TRỌNG
+        if (peerHandle != null) {
+            this.videoEngine = peerHandle.getVideoEngineForUi();
+            if (this.videoEngine != null) {
+                this.videoEngine.setFrameListener((data, from, port) -> {
+                    // Decode JPEG bytes to JavaFX Image and render on remoteVideoFeed
+                    try (ByteArrayInputStream bais = new ByteArrayInputStream(data)) {
+                        Image img = new Image(bais);
+                        Platform.runLater(() -> {
+                            if (remoteVideoFeed != null) {
+                                remoteVideoFeed.setImage(img);
+                            }
+                        });
+                    } catch (Exception ignored) {
+                    }
+                });
+            }
+        }
+
+        init("video"); // 🔥 QUAN TRỌNG
         startInCallUI();
     }
+
     private void startInCallUI() {
         isInCall = true;
         contactName.setText(remoteName);
         startCallTimer();
     }
+
     public long getDurationSeconds() {
         return durationInSeconds;
     }
@@ -143,6 +172,7 @@ public class VideoCallModalController {
             callDurationTimer.stop();
         }
     }
+
     /**
      * Bắt đầu capture video từ webcam và hiển thị trong localVideoFeed.
      */
@@ -159,9 +189,12 @@ public class VideoCallModalController {
                 return;
             }
 
-            // Set resolution (có thể điều chỉnh)
-            webcam.setViewSize(new java.awt.Dimension(640, 480));
-            webcam.open();
+            // Nếu webcam chưa open thì mới set resolution + open.
+            // Thư viện webcam-capture không cho đổi resolution khi đã open.
+            if (!webcam.isOpen()) {
+                webcam.setViewSize(new java.awt.Dimension(640, 480));
+                webcam.open();
+            }
 
             // Tạo timer để update video feed mỗi 33ms (~30 FPS)
             videoUpdateTimer = new Timeline(new KeyFrame(Duration.millis(33), e -> updateVideoFrame()));
@@ -181,7 +214,7 @@ public class VideoCallModalController {
     /**
      * Dừng capture video từ webcam.
      */
-    private void stopVideoCapture() {
+    public void stopVideoCapture() {
         if (videoUpdateTimer != null) {
             videoUpdateTimer.stop();
             videoUpdateTimer = null;
@@ -215,13 +248,24 @@ public class VideoCallModalController {
         try {
             BufferedImage bufferedImage = webcam.getImage();
             if (bufferedImage != null) {
-                // Convert BufferedImage to JavaFX Image
+                // Convert to JavaFX image for local preview
                 Image fxImage = convertToFxImage(bufferedImage);
                 Platform.runLater(() -> {
                     if (localVideoFeed != null) {
                         localVideoFeed.setImage(fxImage);
                     }
                 });
+
+                // Encode to JPEG bytes and send via VideoEngine for remote side
+                if (videoEngine != null) {
+                    try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+                        ImageIO.write(bufferedImage, "jpg", baos);
+                        byte[] bytes = baos.toByteArray();
+                        // Để an toàn với UDP, có thể cắt giảm kích thước sau này nếu cần
+                        videoEngine.sendFrame(bytes);
+                    } catch (IOException ignored) {
+                    }
+                }
             }
         } catch (Exception e) {
             // Ignore errors during capture

@@ -41,6 +41,7 @@ public class MainController implements MessageListener {
     private ChatDb chatDb;
     private String currentUser;
     private final Map<String, Long> callStartTimes = new HashMap<>();
+    private final Map<String, Boolean> callIsVideo = new HashMap<>();
     private Stage callStage; // dùng chung để hiển thị popup gọi thoại/video
     private Stage receiveCallStage; // Lưu reference đến ReceiveCall window để đóng khi accept
     private PeerHandle peerHandle;
@@ -146,25 +147,44 @@ public class MainController implements MessageListener {
     @Override
     public void onVoiceCallStarted(String peerName) {
         Platform.runLater(() -> {
+            // Đóng popup nhận cuộc gọi (nếu có)
             closeReceiveCallWindow();
-            showVoiceCallWindow(peerName);
-            onCallStarted(peerName);
+
+            // Ưu tiên để ChatAreaController cập nhật window "Đang gọi..." thành "Đang trong cuộc gọi"
+            // để KHÔNG mở thêm 1 cửa sổ voice call mới cho bên gọi.
+            if (chatAreaRootController != null) {
+                chatAreaRootController.onCallAccepted(peerName);
+            } else {
+                // Fallback an toàn nếu vì lý do nào đó ChatAreaController chưa sẵn sàng
+                showVoiceCallWindow(peerName);
+            }
+
+            onCallStarted(peerName, false);
         });
     }
 
     @Override
     public void onVideoCallStarted(String peerName) {
         Platform.runLater(() -> {
+            // Đóng popup nhận cuộc gọi (nếu có)
             closeReceiveCallWindow();
-            showVideoCallWindow(peerName);
-            onCallStarted(peerName);
 
+            // Ưu tiên cho ChatAreaController cập nhật window "Đang gọi..." thành "Đang trong cuộc gọi"
+            // để KHÔNG mở thêm 1 cửa sổ video call mới cho bên gọi.
+            if (chatAreaRootController != null) {
+                chatAreaRootController.onCallAccepted(peerName);
+            } else {
+                // Fallback an toàn nếu vì lý do nào đó ChatAreaController chưa sẵn sàng
+                showVideoCallWindow(peerName);
+            }
+
+            onCallStarted(peerName, true);
         });
     }
 
-
-    public void onCallStarted(String peerName) {
+    public void onCallStarted(String peerName, boolean isVideo) {
         callStartTimes.put(peerName, System.currentTimeMillis());
+        callIsVideo.put(peerName, isVideo);
     }
 
     @Override
@@ -179,12 +199,14 @@ public class MainController implements MessageListener {
                         peerName,
                         startTs, // start timestamp
                         duration,      // duration seconds
-                        true           // success
+                        true,          // success
+                        callIsVideo.getOrDefault(peerName, false) // voice/video
                 );
                 chatDb.insertCallRecord(record);
             }
 
             callStartTimes.remove(peerName); // cleanup
+            callIsVideo.remove(peerName);
             VideoCallModalController.closeActiveOnRemoteEnded();
             VoiceCallController.closeActiveOnRemoteEnded();
 
@@ -207,12 +229,14 @@ public class MainController implements MessageListener {
                         peerName,
                         startTs,
                         0,       // duration 0 giây vì bị từ chối
-                        false    // success = false
+                        false,   // success = false
+                        callIsVideo.getOrDefault(peerName, false)
                 );
                 chatDb.insertCallRecord(record);
             }
 
             callStartTimes.remove(peerName);
+            callIsVideo.remove(peerName);
 
             VoiceCallController.closeActiveOnRemoteEnded();
 
@@ -283,6 +307,7 @@ public class MainController implements MessageListener {
             controller.init(peer, peerName, true);
 
             callStage = new Stage();
+            // Voice call giữ kích thước mặc định, nhỏ hơn video call
             callStage.setScene(new Scene(root));
             callStage.show();
         } catch (IOException e) {

@@ -10,6 +10,8 @@ public class Message implements ChatItem {
 
     public long getTimestamp() { return ts; }
 
+    public void setTimestamp(long timestamp) { this.ts = timestamp; }
+
     public Message(String fromUser, String toUser, String content, boolean file, String filePath) {
         this.fromUser = fromUser;
         this.toUser = toUser;

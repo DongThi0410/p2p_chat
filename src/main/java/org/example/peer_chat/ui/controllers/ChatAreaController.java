@@ -1,5 +1,6 @@
 package org.example.peer_chat.ui.controllers;
 
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -10,6 +11,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.geometry.Pos;
 import javafx.scene.input.KeyEvent;
+import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import org.example.peer_chat.*;
@@ -32,9 +34,15 @@ public class ChatAreaController {
     @FXML private VBox messagesBox;
     @FXML private Button sendButton;
     @FXML private Button voiceButton;
+    @FXML private Button attachButton;
+    @FXML private Button imageButton;
     @FXML private Label contactName;
     @FXML private Label contactStatus;
     @FXML private Label contactAvatar;
+
+    // Root layout cho chat và placeholder
+    @FXML private javafx.scene.layout.BorderPane chatRootPane;
+    @FXML private VBox placeholderRoot;
 
     // Root of embedded info panel (fx:include)
     @FXML private StackPane infoPanelRoot; // root StackPane from fx:include
@@ -79,6 +87,16 @@ public class ChatAreaController {
         this.selectedContact = selectedContact;
         this.chatDb = chatDb;
 
+        // Khi đã chọn một contact: ẩn placeholder, hiện khu vực chat chính
+        if (chatRootPane != null) {
+            chatRootPane.setVisible(true);
+            chatRootPane.setManaged(true);
+        }
+        if (placeholderRoot != null) {
+            placeholderRoot.setVisible(false);
+            placeholderRoot.setManaged(false);
+        }
+
         contactName.setText(selectedContact);
         contactStatus.setText("Online");
         contactAvatar.setText("🐱");
@@ -111,8 +129,51 @@ public class ChatAreaController {
             }
         }
     }
+
+    @FXML
+    private void onAttachFile() {
+        if (peer == null || selectedContact == null || chatDb == null) return;
+
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Chọn file để gửi");
+        File f = chooser.showOpenDialog(null);
+        if (f == null) return;
+
+        new Thread(() -> {
+            try {
+                peer.sendFileByName(selectedContact, f.getAbsolutePath());
+                chatDb.insertMessage(new Message(currentUser, selectedContact, f.getName(), true, f.getAbsolutePath()));
+                long size = f.length();
+                Platform.runLater(() -> onIncomingFile(currentUser, f.getName(), f.getAbsolutePath(), size));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }, "send-file-thread").start();
+    }
+
+    @FXML
+    private void onSendImage() {
+        if (peer == null || selectedContact == null || chatDb == null) return;
+
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Chọn ảnh để gửi");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Images", "*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp"));
+        File f = chooser.showOpenDialog(null);
+        if (f == null) return;
+
+        new Thread(() -> {
+            try {
+                peer.sendFileByName(selectedContact, f.getAbsolutePath());
+                chatDb.insertMessage(new Message(currentUser, selectedContact, f.getName(), true, f.getAbsolutePath()));
+                long size = f.length();
+                Platform.runLater(() -> onIncomingFile(currentUser, f.getName(), f.getAbsolutePath(), size));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }, "send-image-thread").start();
+    }
     private void appendCallRecord(CallRecord cr) {
-        String label ="📞 Cuộc gọi thoại";
+        String label = cr.isVideo() ? "📹 Cuộc gọi video" : "📞 Cuộc gọi thoại";
         label += cr.isSuccess() ? " thành công" : " bị từ chối";
         label += " (" + cr.getDuration() + " giây)";
 
@@ -334,14 +395,15 @@ public class ChatAreaController {
             Parent root = loader.load();
 
             VideoCallModalController controller = loader.getController();
-            controller.init("video");
-            controller.setPeerHandle(peer);
+            // Bên gọi: vừa hiển thị video local, vừa chuẩn bị nhận video remote
+            controller.initVideoCall(peer, selectedContact);
             controller.setOutgoingCall(selectedContact);
 
             Stage stage = new Stage();
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.setTitle("Gọi video với " + selectedContact);
-            stage.setScene(new Scene(root));
+            // Video call rộng hơn voice call ~2x
+            stage.setScene(new Scene(root, 800, 520));
             
             // Lưu reference để có thể cập nhật sau
             activeVideoCallStage = stage;
@@ -349,6 +411,9 @@ public class ChatAreaController {
             
             // Đóng window khi user đóng
             stage.setOnCloseRequest(e -> {
+                if (activeVideoCallController != null) {
+                    activeVideoCallController.stopVideoCapture();
+                }
                 activeVideoCallStage = null;
                 activeVideoCallController = null;
                 isCurrentCallVideo = false;
@@ -385,14 +450,15 @@ public class ChatAreaController {
                     Parent root = loader.load();
 
                     VideoCallModalController controller = loader.getController();
-                    controller.init("video");
-                    controller.setPeerHandle(peer);
+                    // Bên nhận: cấu hình đầy đủ video (local + remote)
+                    controller.initVideoCall(peer, peerName);
                     controller.showInCall(peerName);
 
                     Stage stage = new Stage();
                     stage.initModality(Modality.APPLICATION_MODAL);
                     stage.setTitle("Cuộc gọi video với " + peerName);
-                    stage.setScene(new Scene(root));
+                    // Video call rộng hơn voice call ~2x
+                    stage.setScene(new Scene(root, 800, 520));
                     
                     activeVideoCallStage = stage;
                     activeVideoCallController = controller;
@@ -414,7 +480,8 @@ public class ChatAreaController {
                     Parent root = loader.load();
 
                     VoiceCallController controller = loader.getController();
-                    controller.showInCall(peerName);
+                    // Bên nhận: khởi tạo voice call với PeerHandle và trạng thái đang trong cuộc gọi
+                    controller.init(peer, peerName, true);
 
                     Stage stage = new Stage();
                     stage.initModality(Modality.APPLICATION_MODAL);

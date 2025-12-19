@@ -14,37 +14,44 @@
     <!-- Full-screen gradient background -->
     <BorderPane styleClass="call-background">
 
-        <!-- Center content: avatar, name, timer, call type -->
+        <!-- Center content: remote video làm nền + overlay avatar, name, timer, call type -->
         <center>
-            <VBox alignment="CENTER" spacing="16">
-                <!-- Avatar of the contact -->
-                <Label fx:id="contactAvatar" text="🐰" styleClass="call-avatar" />
+            <StackPane styleClass="remote-video-container">
+                <!-- Nền: video đối phương -->
+                <!-- Thu nhỏ một chút để chừa khoảng cho header + nút control -->
+                <ImageView fx:id="remoteVideoFeed" preserveRatio="true" fitWidth="760" fitHeight="380" />
 
-                <!-- Contact Name -->
-                <Label fx:id="contactName" text="Nguyễn Văn A" styleClass="call-name" />
+                <!-- Overlay: giao diện cũ ở giữa -->
+                <VBox alignment="CENTER" spacing="16">
+                    <!-- Avatar of the contact -->
+                    <Label fx:id="contactAvatar" text="🐰" styleClass="call-avatar" />
 
-                <!-- Call duration -->
-                <HBox alignment="CENTER">
-                    <Label fx:id="callDurationWrapper" text="">
-                        <graphic>
-                            <Label>
-                                <graphic>
-                                    <Text fx:id="callDuration" text="00:00" styleClass="call-duration-text" />
-                                </graphic>
-                            </Label>
-                        </graphic>
-                    </Label>
-                </HBox>
+                    <!-- Contact Name -->
+                    <Label fx:id="contactName" text="Nguyễn Văn A" styleClass="call-name" />
 
-                <!-- Call Type (voice or video) -->
-                <HBox alignment="CENTER">
-                    <Label fx:id="callTypePill" styleClass="call-type-pill">
-                        <graphic>
-                            <Text fx:id="callTypeLabel" text="Cuộc gọi thoại 🎤" />
-                        </graphic>
-                    </Label>
-                </HBox>
-            </VBox>
+                    <!-- Call duration -->
+                    <HBox alignment="CENTER">
+                        <Label fx:id="callDurationWrapper" text="">
+                            <graphic>
+                                <Label>
+                                    <graphic>
+                                        <Text fx:id="callDuration" text="00:00" styleClass="call-duration-text" />
+                                    </graphic>
+                                </Label>
+                            </graphic>
+                        </Label>
+                    </HBox>
+
+                    <!-- Call Type (voice or video) -->
+                    <HBox alignment="CENTER">
+                        <Label fx:id="callTypePill" styleClass="call-type-pill">
+                            <graphic>
+                                <Text fx:id="callTypeLabel" text="Cuộc gọi video 📹" />
+                            </graphic>
+                        </Label>
+                    </HBox>
+                </VBox>
+            </StackPane>
         </center>
 
         <!-- Local video preview at top-right -->

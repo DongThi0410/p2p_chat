@@ -18,6 +18,7 @@ public class PeerHandle {
     private final MessageHandler messageHandler;
     private final PeerDiscovery discovery;
     private VoiceEngine voiceEngine;
+    private VideoEngine videoEngine;
 
     // cache: peerName -> "ip:tcpPort"
     private final Map<String, String> cachedPeers = new ConcurrentHashMap<>();
@@ -26,6 +27,10 @@ public class PeerHandle {
     private volatile boolean inCall = false;
     private volatile String currentCallPeer = null;
     int localVoicePort;
+    int localVideoPort;
+    // lưu tạm videoPort của caller khi nhận CALL_REQUEST_VIDEO, dùng cho acceptVideoCall()
+    private volatile int pendingCallerVideoPort = -1;
+
     public PeerHandle(String name, ChatDb db) throws IOException {
         this.name = name;
         this.db = db;
@@ -33,11 +38,11 @@ public class PeerHandle {
         this.serverSocket = new ServerSocket(0);
         this.listenPort = serverSocket.getLocalPort();
 
-         localVoicePort = chooseRandomPort();
+        localVoicePort = chooseRandomPort();
+        localVideoPort = chooseRandomPort();
 
         this.messageHandler = new MessageHandler(this.name, serverSocket, this::onIncomingMessage,
                 this::onIncomingFile);
-//        this.voiceEngine = new VoiceEngine(localVoicePort);
 
         this.discovery = new PeerDiscovery(this.name, this.listenPort, (peerName, addr) -> {
 
@@ -49,14 +54,28 @@ public class PeerHandle {
             }
         });
 
-        System.out.printf("[PeerHandle] %s TCP:%d VOICE:%d%n", name, listenPort, localVoicePort);
+        System.out.printf("[PeerHandle] %s TCP:%d VOICE:%d VIDEO:%d%n", name, listenPort, localVoicePort, localVideoPort);
     }
+
     private VoiceEngine getVoiceEngine() throws LineUnavailableException, SocketException {
         if (voiceEngine == null) {
             voiceEngine = new VoiceEngine(localVoicePort);
         }
         return voiceEngine;
     }
+
+    private VideoEngine getVideoEngine() {
+        if (videoEngine == null) {
+            videoEngine = new VideoEngine(localVideoPort);
+        }
+        return videoEngine;
+    }
+
+    // Expose video engine for UI controllers (e.g. VideoCallModalController)
+    public VideoEngine getVideoEngineForUi() {
+        return getVideoEngine();
+    }
+
     private int chooseRandomPort() {
         try (java.net.ServerSocket s = new java.net.ServerSocket(0)) {
             return s.getLocalPort();
@@ -76,6 +95,7 @@ public class PeerHandle {
     public List<String> getPeerList() {
         return cachedPeers.keySet().stream().sorted().collect(Collectors.toList());
     }
+
     public void removePeer(String peerName) {
         cachedPeers.remove(peerName);
         if (listener != null) {
@@ -83,11 +103,13 @@ public class PeerHandle {
             System.out.println("[removePeer] Peer offline: " + peerName);
         }
     }
+
     public void broadcastOffline() {
         for (String peerName : cachedPeers.keySet()) {
             sendToByName(peerName, "SYSTEM|OFFLINE|" + name);
         }
     }
+
     public void logout() {
         broadcastOffline();    // gửi tới các peer khác trước
         removePeer(name);  // xóa khỏi cachedPeers của chính mình
@@ -163,9 +185,9 @@ public class PeerHandle {
         // Đánh dấu đang trong quá trình gọi video (chưa được accept)
         currentCallPeer = peerName;
 
-        // send CALL_REQUEST_VIDEO|callerName|callerIp|callerVoicePort
+        // send CALL_REQUEST_VIDEO|callerName|callerIp|callerVoicePort|callerVideoPort
         String myIp = getLocalAddress();
-        String msg = "CALL_REQUEST_VIDEO|" + name + "|" + myIp + "|" + getVoiceEngine().getLocalPort();
+        String msg = "CALL_REQUEST_VIDEO|" + name + "|" + myIp + "|" + getVoiceEngine().getLocalPort() + "|" + getVideoEngine().getLocalPort();
         messageHandler.sendText(addr, msg);
         System.out.println("[VideoCall] requested video call to " + peerName + " via " + addr);
     }
@@ -207,10 +229,18 @@ public class PeerHandle {
 
         if (addr != null) {
             String myIp = getLocalAddress();
-            String resp = "CALL_ACCEPT_VIDEO|" + name + "|" + myIp + "|" + getVoiceEngine().getLocalPort();
+            String resp = "CALL_ACCEPT_VIDEO|" + name + "|" + myIp + "|" + getVoiceEngine().getLocalPort() + "|" + getVideoEngine().getLocalPort();
             messageHandler.sendText(addr, resp);
         }
+
+        // callerVoicePort là cổng voice của caller, pendingCallerVideoPort là cổng video
+        int callerVideoPort = pendingCallerVideoPort;
+        pendingCallerVideoPort = -1;
+
         getVoiceEngine().start(callerIp, callerVoicePort);
+        if (callerVideoPort > 0) {
+            getVideoEngine().start(callerIp, callerVideoPort);
+        }
         System.out.println("[VideoCall] accepted and started video call with " + callerName);
 
         // Notify UI that video call has started (for side B - the accepter)
@@ -268,15 +298,20 @@ public class PeerHandle {
             }
         }
 
-        // signaling: CALL_REQUEST_VIDEO|caller|ip|voicePort
+        // signaling: CALL_REQUEST_VIDEO|caller|ip|voicePort|videoPort
         if (message != null && message.startsWith("CALL_REQUEST_VIDEO|")) {
             String[] p = message.split("\\|");
-            if (p.length == 4) {
+            if (p.length == 5) {
                 String caller = p[1];
                 String ip = p[2];
                 int voicePort = Integer.parseInt(p[3]);
+                int videoPort = Integer.parseInt(p[4]);
 
-                // notify UI for video call
+                // Lưu lại cổng video của caller để acceptVideoCall() dùng khi start VideoEngine
+                pendingCallerVideoPort = videoPort;
+
+                System.out.println("[VideoCall] incoming request from " + caller + " voicePort=" + voicePort + " videoPort=" + videoPort);
+
                 if (listener != null)
                     listener.onIncomingVideoCall(caller, ip, voicePort);
                 return;
@@ -305,15 +340,17 @@ public class PeerHandle {
 
         if (message != null && message.startsWith("CALL_ACCEPT_VIDEO|")) {
             String[] p = message.split("\\|");
-            if (p.length == 4) {
+            if (p.length == 5) {
                 String accepter = p[1];
                 String ip = p[2];
                 int voicePort = Integer.parseInt(p[3]);
-                // other side accepted video call — start voice engine towards accepter
+                int videoPort = Integer.parseInt(p[4]);
+                // other side accepted video call — start engines towards accepter
                 currentCallPeer = accepter;
                 inCall = true;
                 getVoiceEngine().start(ip, voicePort);
-                System.out.println("[VideoCall] remote accepted. starting video call to " + accepter + "@" + ip + ":" + voicePort);
+                getVideoEngine().start(ip, videoPort);
+                System.out.println("[VideoCall] remote accepted. starting video call to " + accepter + "@" + ip + ":" + voicePort + " videoPort=" + videoPort);
 
                 // notify UI so caller side can transition from "Đang gọi..." to VideoCallModal UI
                 if (listener != null)
@@ -328,8 +365,12 @@ public class PeerHandle {
                 String ender = p[1];
                 System.out.println("[Peer] Received CALL_END from " + ender);
 
-                // Stop voice engine and clean up
+                // Stop voice/video engines and clean up
                 getVoiceEngine().stop();
+                if (videoEngine != null) {
+                    videoEngine.stop();
+                }
+
                 inCall = false;
                 currentCallPeer = null;
 
