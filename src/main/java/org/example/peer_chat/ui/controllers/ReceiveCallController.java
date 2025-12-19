@@ -1,10 +1,14 @@
 package org.example.peer_chat.ui.controllers;
 
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.stage.Stage;
 import org.example.peer_chat.PeerHandle;
+
+import javax.sound.sampled.LineUnavailableException;
+import java.net.SocketException;
 
 public class ReceiveCallController {
 
@@ -18,6 +22,7 @@ public class ReceiveCallController {
     private String callerIp;
     private int callerVoicePort;
     private boolean isVideoCall = false;
+    private Stage stage;
 
     public void init(PeerHandle peerHandle, String callerName, String callerIp, int callerVoicePort) {
         this.peerHandle = peerHandle;
@@ -25,6 +30,9 @@ public class ReceiveCallController {
         this.callerIp = callerIp;
         this.callerVoicePort = callerVoicePort;
         this.isVideoCall = false;
+    }
+    public void setStage(Stage stage) {
+        this.stage = stage;
     }
 
     public void init(PeerHandle peerHandle, String callerName, String callerIp, int callerVoicePort, boolean isVideoCall) {
@@ -36,7 +44,7 @@ public class ReceiveCallController {
     }
 
     @FXML
-    public void onAcceptCall(ActionEvent event) {
+    public void onAcceptCall(ActionEvent event) throws SocketException, LineUnavailableException {
         // Chấp nhận cuộc gọi: báo core layer và mở UI voice-call-view hoặc video-call-modal
         if (peerHandle != null && callerName != null) {
             System.out.println("[ReceiveCallController] Accept pressed for caller=" + callerName + " (video=" + isVideoCall + ")");
@@ -53,18 +61,21 @@ public class ReceiveCallController {
     }
 
     @FXML
-    public void onRejectCall(ActionEvent event) {
-        // Từ chối cuộc gọi: chỉ cần đóng UI (chưa gửi CALL_REJECT)
+    public void rejectIncomingCall(ActionEvent event) {
+        System.out.println("[ReceiveCallController] Reject pressed for caller=" + callerName);
+
+        if (peerHandle != null && callerName != null) {
+            peerHandle.rejectCall(callerName);
+        }
+
         closeWindow();
     }
 
-    // Đóng hoàn toàn cửa sổ ReceiveCall hiện tại (dùng cho nút Hủy).
+
     private void closeWindow() {
-        if (acceptButton != null && acceptButton.getScene() != null) {
-            Stage stage = (Stage) acceptButton.getScene().getWindow();
-            if (stage != null) {
-                stage.close();
-            }
+        if (stage != null && stage.isShowing()) {
+            stage.close();
+            stage = null;
         }
     }
 }

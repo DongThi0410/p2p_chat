@@ -1,6 +1,7 @@
 package org.example.peer_chat;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.Parent;
 import javafx.stage.Stage;
@@ -40,6 +41,7 @@ public class AppTestUI extends Application {
 
         // Wire login success -> open main view
         LoginController loginController = loader.getController();
+        loginController.setChatDb(chatDb);
         loginController.setOnLogin(this::openMainView);
 
         Scene scene = new Scene(root, 1000, 700);
@@ -60,7 +62,19 @@ public class AppTestUI extends Application {
             PeerHandle peer = new PeerHandle(username, chatDb);
 
             mainController.init(peer, username, chatDb);
+            mainController.setOnLogoutCallback(() -> {
+                // Xử lý peer offline nếu cần
+                if (peer != null) peer.removePeer(username);
 
+                // Quay về login
+                Platform.runLater(() -> {
+                    try {
+                        showLoginScene();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                });
+            });
             Scene scene = new Scene(mainRoot, 1000, 700);
             stage.setScene(scene);
             stage.centerOnScreen();
@@ -71,7 +85,21 @@ public class AppTestUI extends Application {
             e.printStackTrace();
         }
     }
+    private void showLoginScene() throws IOException {
+        URL fxmlUrl = getClass().getResource("/ui/login-view.fxml");
+        if (fxmlUrl == null) {
+            fxmlUrl = AppTestUI.class.getClassLoader().getResource("ui/login-view.fxml");
+            if (fxmlUrl == null) throw new IOException("Cannot find login-view.fxml");
+        }
+        FXMLLoader loader = new FXMLLoader(fxmlUrl);
+        Parent root = loader.load();
+        LoginController loginController = loader.getController();
+        loginController.setChatDb(chatDb);
+        loginController.setOnLogin(this::openMainView);
 
+        stage.setScene(new Scene(root, 1000, 700));
+        stage.centerOnScreen();
+    }
     public static void main(String[] args) {
         launch(args);
     }

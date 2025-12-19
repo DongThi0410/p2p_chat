@@ -17,7 +17,10 @@ import javafx.application.Platform;
 import org.example.peer_chat.PeerHandle;
 import com.github.sarxos.webcam.Webcam;
 import com.github.sarxos.webcam.WebcamException;
+
+import javax.sound.sampled.LineUnavailableException;
 import java.awt.image.BufferedImage;
+import java.net.SocketException;
 
 public class VideoCallModalController {
 
@@ -110,7 +113,36 @@ public class VideoCallModalController {
                 break;
         }
     }
+    public void initVideoCall(PeerHandle peerHandle, String remoteName) {
+        this.peerHandle = peerHandle;
+        this.remoteName = remoteName;
 
+        init("video");          // 🔥 QUAN TRỌNG
+        startInCallUI();
+    }
+    private void startInCallUI() {
+        isInCall = true;
+        contactName.setText(remoteName);
+        startCallTimer();
+    }
+    public long getDurationSeconds() {
+        return durationInSeconds;
+    }
+
+    private void startCallTimer() {
+        stopCallTimer();
+        durationInSeconds = 0;
+        updateCallDuration();
+        callDurationTimer = new Timeline(new KeyFrame(Duration.seconds(1), e -> updateCallDuration()));
+        callDurationTimer.setCycleCount(Timeline.INDEFINITE);
+        callDurationTimer.play();
+    }
+
+    private void stopCallTimer() {
+        if (callDurationTimer != null) {
+            callDurationTimer.stop();
+        }
+    }
     /**
      * Bắt đầu capture video từ webcam và hiển thị trong localVideoFeed.
      */
@@ -350,7 +382,7 @@ public class VideoCallModalController {
     }
 
     @FXML
-    private void onEndCall() {
+    private void onEndCall() throws SocketException, LineUnavailableException {
         // Gửi CALL_END và trigger onCallEnded() callback
         // Không đóng window ở đây, để onCallEnded() callback xử lý
         // để đảm bảo cả hai bên đều đóng window và hiển thị popup
@@ -367,9 +399,9 @@ public class VideoCallModalController {
     }
 
     @FXML
-    private void onAcceptCall() {
+    private void onAcceptCall() throws SocketException, LineUnavailableException {
         if (peerHandle != null && remoteName != null) {
-            peerHandle.acceptCall(remoteName, remoteIp, remoteVoicePort);
+            peerHandle.acceptVideoCall(remoteName, remoteIp, remoteVoicePort);
         }
 
         isIncoming = false;

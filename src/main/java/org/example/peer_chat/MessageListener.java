@@ -5,7 +5,10 @@ public interface MessageListener {
     void onFileReceived(String sender, String filename, String absolutePath, long size);
     void onIncomingCall(String callerName, String callerIp, int callerVoicePort);
     void onIncomingVideoCall(String callerName, String callerIp, int callerVoicePort);
-    void onCallStarted(String peerName);
+    void onVoiceCallStarted(String peerName);
+    void onVideoCallStarted(String peerName);
     void onCallEnded(String peerName);
+    void onCallRejected(String peerName);
+
 }
 

@@ -5,6 +5,7 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
@@ -13,13 +14,17 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import org.example.peer_chat.CallRecord;
 import org.example.peer_chat.ChatDb;
 import org.example.peer_chat.MessageListener;
 import org.example.peer_chat.PeerHandle;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-public class MainController {
+public class MainController implements MessageListener {
 
     @FXML
     private Label currentUserLabel;
@@ -27,7 +32,6 @@ public class MainController {
     private Label selectedContactLabel;
     @FXML
     private StackPane videoCallModal;
-    // Controllers from fx:include: fx:id + "Controller"
     @FXML
     private SidebarController sidebarRootController;
     @FXML
@@ -36,11 +40,11 @@ public class MainController {
     private PeerHandle peer;
     private ChatDb chatDb;
     private String currentUser;
-
-    private boolean showVideoCall = false;
-    private String callType = "video";
+    private final Map<String, Long> callStartTimes = new HashMap<>();
     private Stage callStage; // dùng chung để hiển thị popup gọi thoại/video
     private Stage receiveCallStage; // Lưu reference đến ReceiveCall window để đóng khi accept
+    private PeerHandle peerHandle;
+    private Runnable onLogout;
 
     public void init(PeerHandle peer, String currentUser, ChatDb chatDb) {
         this.peer = peer;
@@ -53,117 +57,42 @@ public class MainController {
 
         // init sidebar with contacts from discovery
         if (sidebarRootController != null && peer != null) {
-            sidebarRootController.init(currentUser, this::onLogoutRequested, peer.getPeerList());
+            // Đúng: truyền chatDb để SidebarController tự load all users
+            sidebarRootController.init(currentUser, null, chatDb);
             sidebarRootController.setOnContactSelected(this::onContactSelected);
+            sidebarRootController.setOnLogout(() -> {
+                // Xóa user khỏi peer list
+                if (peer != null) {
+                    peer.broadcastOffline();
+                    peer.removePeer(currentUser);
+                }
+
+                // Chuyển màu offline
+                sidebarRootController.updateUserStatus(currentUser, false);
+
+
+                // Gọi callback từ AppTestUI để quay về login
+                if (onLogout != null) {
+                    onLogout.run();
+                }
+            });
             startSidebarAutoRefresh();
         }
 
         // register listener to receive events from core and push to UI controllers
         if (peer != null) {
-            peer.setListener(new MessageListener() {
-                @Override
-                public void onMessage(String sender, String msg) {
-                    Platform.runLater(() -> {
-                        if (chatAreaRootController != null) {
-                            chatAreaRootController.onIncomingMessage(sender, msg);
-                        }
-                    });
-                }
-
-                @Override
-                public void onFileReceived(String sender, String filename, String absolutePath, long size) {
-                    Platform.runLater(() -> {
-                        if (chatAreaRootController != null) {
-                            chatAreaRootController.onIncomingFile(sender, filename, absolutePath, size);
-                        }
-                    });
-                }
-
-                @Override
-                public void onIncomingCall(String callerName, String callerIp, int callerVoicePort) {
-                    Platform.runLater(() -> {
-                        // Đánh dấu là voice call trong ChatAreaController
-                        if (chatAreaRootController != null) {
-                            chatAreaRootController.setCurrentCallVideo(false);
-                        }
-                        showReceiveCallWindow(callerName, callerIp, callerVoicePort, false);
-                    });
-                }
-
-                @Override
-                public void onIncomingVideoCall(String callerName, String callerIp, int callerVoicePort) {
-                    Platform.runLater(() -> {
-                        // Đánh dấu là video call trong ChatAreaController
-                        if (chatAreaRootController != null) {
-                            chatAreaRootController.setCurrentCallVideo(true);
-                        }
-                        showReceiveCallWindow(callerName, callerIp, callerVoicePort, true);
-                    });
-                }
-
-                @Override
-                public void onCallStarted(String peerName) {
-                    Platform.runLater(() -> {
-                        // Đóng ReceiveCall window nếu đang mở (bên B sau khi accept)
-                        closeReceiveCallWindow();
-                        
-                        // Cập nhật UI hiện tại nếu đang có window "Đang gọi..." mở (bên A)
-                        // Hoặc mở window mới nếu chưa có (bên B sau khi accept)
-                        if (chatAreaRootController != null) {
-                            chatAreaRootController.onCallAccepted(peerName);
-                        } else {
-                            // Fallback: mở window mới nếu không có ChatAreaController
-                            showVoiceCallWindow(peerName);
-                        }
-                    });
-                }
-
-                @Override
-                public void onCallEnded(String peerName) {
-                    Platform.runLater(() -> {
-                        // Đóng tất cả các UI call đang mở
-                        showVideoCall = false;
-                        if (videoCallModal != null) {
-                            videoCallModal.setVisible(false);
-                        }
-                        
-                        // Đóng VideoCallModal nếu đang mở
-                        VideoCallModalController.closeActiveOnRemoteEnded();
-                        
-                        // Đóng VoiceCallController nếu đang mở
-                        VoiceCallController.closeActiveOnRemoteEnded();
-                        
-                        // Đóng các call windows được track trong ChatAreaController
-                        if (chatAreaRootController != null) {
-                            chatAreaRootController.closeCallWindows();
-                        }
-                        
-                        // Đóng callStage nếu đang mở
-                        closeCallWindow();
-                        
-                        // Hiển thị popup "Cuộc gọi đã kết thúc" sau khi đóng tất cả windows
-                        showCallEndedPopup(peerName);
-                    });
-                }
-            });
+            peer.setListener(this);
         }
     }
 
-    @FXML
-    private void onStartCall() {
-        // optional handler if bound from FXML buttons
-        if (chatAreaRootController != null) {
-            chatAreaRootController.onCallVoice();
-        }
+    public void setOnLogoutCallback(Runnable callback) {
+        this.onLogout = callback;
     }
 
-    @FXML
-    private void onCloseCall() {
-        showVideoCall = false;
-        if (videoCallModal != null) {
-            videoCallModal.setVisible(false);
+    private void onLogoutRequested() {
+        if (onLogout != null) {
+            onLogout.run();
         }
-        closeCallWindow();
     }
 
     private void onContactSelected(String contactName) {
@@ -175,9 +104,126 @@ public class MainController {
         }
     }
 
-    private void onLogoutRequested() {
-        // TODO: implement navigation back to login if needed
+
+    @Override
+    public void onMessage(String sender, String msg) {
+        Platform.runLater(() -> {
+            if (chatAreaRootController != null) {
+                chatAreaRootController.onIncomingMessage(sender, msg);
+            }
+        });
     }
+
+    @Override
+    public void onFileReceived(String sender, String filename, String absolutePath, long size) {
+        Platform.runLater(() -> {
+            if (chatAreaRootController != null) {
+                chatAreaRootController.onIncomingFile(sender, filename, absolutePath, size);
+            }
+        });
+    }
+
+    @Override
+    public void onIncomingCall(String callerName, String callerIp, int callerVoicePort) {
+        Platform.runLater(() -> {
+            if (chatAreaRootController != null) {
+                chatAreaRootController.setCurrentCallVideo(false);
+            }
+            showReceiveCallWindow(callerName, callerIp, callerVoicePort, false);
+        });
+    }
+
+    @Override
+    public void onIncomingVideoCall(String callerName, String callerIp, int callerVoicePort) {
+        Platform.runLater(() -> {
+            if (chatAreaRootController != null) {
+                chatAreaRootController.setCurrentCallVideo(true);
+            }
+            showReceiveCallWindow(callerName, callerIp, callerVoicePort, true);
+        });
+    }
+
+    @Override
+    public void onVoiceCallStarted(String peerName) {
+        Platform.runLater(() -> {
+            closeReceiveCallWindow();
+            showVoiceCallWindow(peerName);
+            onCallStarted(peerName);
+        });
+    }
+
+    @Override
+    public void onVideoCallStarted(String peerName) {
+        Platform.runLater(() -> {
+            closeReceiveCallWindow();
+            showVideoCallWindow(peerName);
+            onCallStarted(peerName);
+
+        });
+    }
+
+
+    public void onCallStarted(String peerName) {
+        callStartTimes.put(peerName, System.currentTimeMillis());
+    }
+
+    @Override
+    public void onCallEnded(String peerName) {
+        Platform.runLater(() -> {
+            long startTs = callStartTimes.getOrDefault(peerName, System.currentTimeMillis());
+            long duration = (System.currentTimeMillis() - startTs) / 1000; // giây
+            if (chatDb != null) {
+                // success = true vì đây là cuộc gọi kết thúc bình thường
+                CallRecord record = new CallRecord(
+                        currentUser,
+                        peerName,
+                        startTs, // start timestamp
+                        duration,      // duration seconds
+                        true           // success
+                );
+                chatDb.insertCallRecord(record);
+            }
+
+            callStartTimes.remove(peerName); // cleanup
+            VideoCallModalController.closeActiveOnRemoteEnded();
+            VoiceCallController.closeActiveOnRemoteEnded();
+
+            if (chatAreaRootController != null) {
+                chatAreaRootController.closeCallWindows();
+            }
+
+            closeCallWindow();
+            showCallEndedPopup(peerName);
+        });
+    }
+
+    public void onCallRejected(String peerName) {
+        Platform.runLater(() -> {
+            long startTs = callStartTimes.getOrDefault(peerName, System.currentTimeMillis());
+
+            if (chatDb != null) {
+                CallRecord record = new CallRecord(
+                        currentUser,
+                        peerName,
+                        startTs,
+                        0,       // duration 0 giây vì bị từ chối
+                        false    // success = false
+                );
+                chatDb.insertCallRecord(record);
+            }
+
+            callStartTimes.remove(peerName);
+
+            VoiceCallController.closeActiveOnRemoteEnded();
+
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Cuộc gọi bị từ chối");
+            alert.setHeaderText(null);
+            alert.setContentText(peerName + " đã từ chối cuộc gọi.");
+            alert.showAndWait();
+        });
+    }
+
 
     private void startSidebarAutoRefresh() {
         Thread t = new Thread(() -> {
@@ -185,8 +231,8 @@ public class MainController {
                 try {
                     Thread.sleep(1500);
                     if (sidebarRootController != null) {
-                        var peers = peer.getPeerList();
-                        Platform.runLater(() -> sidebarRootController.updateContacts(peers));
+                        List<String> onlinePeers = peer.getPeerList();
+                        Platform.runLater(() -> sidebarRootController.updateOnlinePeers(onlinePeers));
                     }
                 } catch (InterruptedException ignored) {
                 }
@@ -196,35 +242,31 @@ public class MainController {
         t.start();
     }
 
-    // ===== Call UI helpers =====
     private void showReceiveCallWindow(String callerName, String callerIp, int callerVoicePort, boolean isVideoCall) {
         try {
             // Đóng window cũ nếu đang mở
             closeReceiveCallWindow();
-            
+
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/ui/ReceiveCall.fxml"));
             Parent root = loader.load();
 
-            ReceiveCallController controller = loader.getController();
-            controller.init(peer, callerName, callerIp, callerVoicePort, isVideoCall);
 
             receiveCallStage = new Stage();
             receiveCallStage.initModality(Modality.APPLICATION_MODAL);
             String title = isVideoCall ? "Cuộc gọi video đến từ " + callerName : "Cuộc gọi đến từ " + callerName;
             receiveCallStage.setTitle(title);
             receiveCallStage.setScene(new Scene(root));
-            
-            // Đóng khi user đóng window
-            receiveCallStage.setOnCloseRequest(e -> {
-                receiveCallStage = null;
-            });
-            
+
+            ReceiveCallController controller = loader.getController();
+            controller.init(peer, callerName, callerIp, callerVoicePort, isVideoCall);
+            controller.setStage(receiveCallStage);
+
             receiveCallStage.show();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
-    
+
     private void closeReceiveCallWindow() {
         if (receiveCallStage != null && receiveCallStage.isShowing()) {
             receiveCallStage.close();
@@ -236,16 +278,43 @@ public class MainController {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/ui/voice-call-view.fxml"));
             Parent root = loader.load();
+
             VoiceCallController controller = loader.getController();
-            controller.initIncomingAccepted(peer, peerName);
+            controller.init(peer, peerName, true);
 
             callStage = new Stage();
-            callStage.initModality(Modality.APPLICATION_MODAL);
-            callStage.setTitle("Cuộc gọi với " + peerName);
             callStage.setScene(new Scene(root));
             callStage.show();
         } catch (IOException e) {
             e.printStackTrace();
+            // Show error message to user
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Error");
+            alert.setHeaderText("Failed to load voice call interface");
+            alert.setContentText("The voice call interface could not be loaded: " + e.getMessage());
+            alert.showAndWait();
+        }
+    }
+
+    private void showVideoCallWindow(String peerName) {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/ui/video-call-modal.fxml"));
+            Parent root = loader.load();
+
+            VideoCallModalController controller = loader.getController();
+            controller.initVideoCall(peer, peerName);
+
+            callStage = new Stage();
+            callStage.setScene(new Scene(root));
+            callStage.show();
+        } catch (IOException e) {
+            e.printStackTrace();
+            // Show error message to user
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Error");
+            alert.setHeaderText("Failed to load video call interface");
+            alert.setContentText("The video call interface could not be loaded: " + e.getMessage());
+            alert.showAndWait();
         }
     }
 
@@ -255,7 +324,7 @@ public class MainController {
             callStage = null;
         }
     }
-    
+
     private void showCallEndedPopup(String peerName) {
         Stage popup = new Stage();
         popup.initModality(Modality.APPLICATION_MODAL);
@@ -274,4 +343,5 @@ public class MainController {
         popup.setScene(new Scene(root, 300, 150));
         popup.show();
     }
+
 }

@@ -12,16 +12,18 @@ import javafx.geometry.Pos;
 import javafx.scene.input.KeyEvent;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-import org.example.peer_chat.ChatDb;
-import org.example.peer_chat.PeerHandle;
-import org.example.peer_chat.Message;
+import org.example.peer_chat.*;
 import org.example.peer_chat.ui.controllers.VideoCallModalController;
 import org.example.peer_chat.ui.controllers.InfoPanelController;
 import org.example.peer_chat.ui.controllers.ReceiveCallController;
 import org.example.peer_chat.ui.controllers.VoiceCallController;
 
+import javax.sound.sampled.LineUnavailableException;
 import java.io.IOException;
 import java.io.File;
+import java.net.SocketException;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 public class ChatAreaController {
@@ -52,16 +54,11 @@ public class ChatAreaController {
     private VideoCallModalController activeVideoCallController;
     private boolean isCurrentCallVideo = false; // Track loại call hiện tại
     
-    /**
-     * Set loại call hiện tại (voice/video). Được gọi từ MainController khi nhận incoming call.
-     */
+
     public void setCurrentCallVideo(boolean isVideo) {
         this.isCurrentCallVideo = isVideo;
     }
-    
-    /**
-     * Đóng tất cả các call windows đang mở. Được gọi khi call kết thúc.
-     */
+
     public void closeCallWindows() {
         if (activeVoiceCallStage != null && activeVoiceCallStage.isShowing()) {
             activeVoiceCallStage.close();
@@ -91,12 +88,43 @@ public class ChatAreaController {
 
     private void loadMessages() {
         messagesBox.getChildren().clear();
+
         if (chatDb == null || currentUser == null || selectedContact == null) return;
 
-        List<Message> messages = chatDb.loadConversationAsc(currentUser, selectedContact, 500);
-        for (Message msg : messages) {
-            appendMessage(msg);
+        List<ChatItem> items = new ArrayList<>();
+
+        // Load tin nhắn
+        items.addAll(chatDb.loadConversationAsc(currentUser, selectedContact, 500));
+
+        // Load lịch sử cuộc gọi
+        items.addAll(chatDb.loadCallHistory(currentUser, selectedContact, 100));
+
+        // Sắp xếp theo timestamp
+        items.sort(Comparator.comparingLong(ChatItem::getTimestamp));
+
+        // Render
+        for (ChatItem item : items) {
+            if (item instanceof Message msg) {
+                appendMessage(msg);
+            } else if (item instanceof CallRecord cr) {
+                appendCallRecord(cr);
+            }
         }
+    }
+    private void appendCallRecord(CallRecord cr) {
+        String label ="📞 Cuộc gọi thoại";
+        label += cr.isSuccess() ? " thành công" : " bị từ chối";
+        label += " (" + cr.getDuration() + " giây)";
+
+        Label bubble = new Label(label);
+        bubble.setWrapText(true);
+        bubble.getStyleClass().add("bubble-call");
+
+        HBox row = new HBox(bubble);
+        row.setAlignment(Pos.CENTER);
+        row.getStyleClass().add("chat-row");
+
+        messagesBox.getChildren().add(row);
     }
 
     private void appendMessage(Message msg) {
@@ -151,7 +179,13 @@ public class ChatAreaController {
             e.printStackTrace();
         }
     }
+    public VoiceCallController getActiveVoiceCallController() {
+        return activeVoiceCallController;
+    }
 
+    public VideoCallModalController getActiveVideoCallController() {
+        return activeVideoCallController;
+    }
     /**
      * Chỉ dùng cho gọi video: mở video-call-modal.fxml với VideoCallModalController.
      */
@@ -224,7 +258,7 @@ public class ChatAreaController {
     // ===== Header call buttons =====
 
     @FXML
-    public void onCallVoice() {
+    public void onCallVoice() throws SocketException, LineUnavailableException {
         if (peer != null && selectedContact != null) {
             peer.startVoiceCall(selectedContact);
         }
@@ -233,7 +267,7 @@ public class ChatAreaController {
     }
 
     @FXML
-    private void onCallVideo() {
+    private void onCallVideo() throws SocketException, LineUnavailableException {
         if (peer != null && selectedContact != null) {
             peer.startVideoCall(selectedContact);
             isCurrentCallVideo = true; // Đánh dấu là video call

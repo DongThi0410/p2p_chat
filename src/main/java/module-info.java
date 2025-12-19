@@ -12,6 +12,7 @@ module org.example.peer_chat {
     requires junit;
     // webcam-capture: automatic module name derived from JAR file name
     requires webcam.capture;
+    requires javafx.graphics;
 
     opens org.example.peer_chat to javafx.fxml, testfx.core;
     opens org.example.peer_chat.ui.controllers to javafx.fxml, webcam.capture;

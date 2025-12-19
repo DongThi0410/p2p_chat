@@ -10,7 +10,8 @@
            fx:controller="org.example.peer_chat.ui.controllers.VoiceCallController"
            stylesheets="@../css/voice-call.css"
            styleClass="voice-call-root">
-
+    <BorderPane styleClass="call-background"
+                mouseTransparent="true"/>
     <!-- Full-screen gradient background -->
     <BorderPane styleClass="call-background">
 
@@ -47,29 +48,31 @@
 <!--        <top>-->
 <!--            <HBox alignment="TOP_RIGHT" BorderPane.alignment="TOP_RIGHT">-->
 <!--                <padding>-->
-<!--                    <Insets top="20" right="20" bottom="0" left="0" />-->
-<!--                </padding>-->
-<!--                <StackPane fx:id="localVideoContainer" styleClass="local-video-container">-->
-<!--                    <ImageView fx:id="localVideoFeed" fitWidth="220" fitHeight="150" />-->
-<!--                    <Label text="Camera của bạn 📷" styleClass="local-video-label" />-->
-<!--                </StackPane>-->
-<!--            </HBox>-->
-<!--        </top>-->
+        <!--                    <Insets top="20" right="20" bottom="0" left="0" />-->
+        <!--                </padding>-->
+        <!--                <StackPane fx:id="localVideoContainer" styleClass="local-video-container">-->
+        <!--                    <ImageView fx:id="localVideoFeed" fitWidth="220" fitHeight="150" />-->
+        <!--                    <Label text="Camera của bạn 📷" styleClass="local-video-label" />-->
+        <!--                </StackPane>-->
+        <!--            </HBox>-->
+        <!--        </top>-->
 
         <!-- Bottom controls -->
         <bottom>
             <HBox alignment="CENTER" spacing="18" styleClass="call-controls">
                 <padding>
-                    <Insets top="0" right="0" bottom="32" left="0" />
+                    <Insets top="0" right="0" bottom="32" left="0"/>
                 </padding>
 
                 <!-- Accept / Reject buttons for incoming calls -->
-                <Button fx:id="acceptCallButton" text="Chấp nhận" onAction="#acceptIncomingCall" styleClass="call-btn call-btn-accept" visible="false" />
-                <Button fx:id="rejectCallButton" text="Hủy" onAction="#rejectIncomingCall" styleClass="call-btn call-btn-reject" visible="false" />
+                <Button fx:id="acceptCallButton" text="Chấp nhận" onAction="#onAccept"
+                        styleClass="call-btn call-btn-accept" visible="false"/>
+                <Button fx:id="rejectCallButton" text="Từ chối" onAction="#rejectIncomingCall"
+                        styleClass="call-btn call-btn-reject" visible="false"/>
 
                 <!-- In-call controls (shown khi đang trong cuộc gọi) -->
-                <Button fx:id="muteButton" text="🔈" onAction="#toggleMute" styleClass="call-btn call-btn-mute" />
-                <Button fx:id="endCallButton" text="✖" onAction="#endCall" styleClass="call-btn call-btn-end" />
+                <Button fx:id="muteButton" text="🔈" onAction="#toggleMute" styleClass="call-btn call-btn-mute"/>
+                <Button fx:id="endCallButton" onAction="#endCall" text="Kết thúc"/>
             </HBox>
         </bottom>
 

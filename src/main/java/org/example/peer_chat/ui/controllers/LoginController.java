@@ -5,46 +5,97 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.Pane;
 import javafx.util.Duration;
+import org.example.peer_chat.ChatDb;
 
 import java.util.Random;
 import java.util.function.Consumer;
 
 public class LoginController {
 
-    @FXML private Pane floatingLayer;
-    @FXML private Pane starLayer;
+    @FXML
+    private Pane floatingLayer;
+    @FXML
+    private Pane starLayer;
 
-    @FXML private TextField usernameField;
-    @FXML private PasswordField passwordField;
-    @FXML private PasswordField confirmPasswordField;
-    @FXML private javafx.scene.layout.VBox confirmBox;
+    @FXML
+    private TextField usernameField;
+    @FXML
+    private PasswordField passwordField;
+    @FXML
+    private PasswordField confirmPasswordField;
 
-    @FXML private Button submitBtn;
-    @FXML private Button toggleBtn;
+    @FXML
+    private Button submitBtn;
+    @FXML
+    private Button toggleBtn;
 
-    @FXML private Label catEmoji;
-    @FXML private Label heartEmoji;
-    @FXML private Label rabbitEmoji;
+    @FXML
+    private Label catEmoji;
+    @FXML
+    private Label heartEmoji;
+    @FXML
+    private Label rabbitEmoji;
 
     private final Random rnd = new Random();
-    private boolean isRegister = false;
+    private boolean isLogin = false;
+    private ChatDb chatDb;
+
+    public void setChatDb(ChatDb chatDb) {
+        this.chatDb = chatDb;
+    }
 
     private Consumer<String> onLogin;
+
+    @FXML
+    private void onLogin() {
+        String username = usernameField.getText() == null ? "" : usernameField.getText().trim();
+        String password = passwordField.getText() == null ? "" : passwordField.getText();
+
+        if (username.isEmpty() || password.isEmpty()) {
+            new Alert(Alert.AlertType.WARNING, "Vui lòng nhập đầy đủ thông tin").show();
+            return;
+        }
+
+        boolean success = chatDb.loginUser(username, password);
+
+        if (success) {
+            if (onLogin != null) onLogin.accept(username); // callback sang MainView
+        } else {
+            new Alert(Alert.AlertType.ERROR, "Tên đăng nhập hoặc mật khẩu không đúng 💔").show();
+        }
+    }
+
+
+    @FXML
+    private void onRegister() {
+        String username = usernameField.getText() == null ? "" : usernameField.getText().trim();
+        String password = passwordField.getText() == null ? "" : passwordField.getText();
+
+
+        if (username.isEmpty() || password.isEmpty()) {
+            new Alert(Alert.AlertType.WARNING, "Vui lòng nhập đầy đủ thông tin").show();
+            return;
+        }
+
+        boolean success = chatDb.registerUser(username, password); // lưu vào DB
+        new Alert(Alert.AlertType.WARNING, success ? "Đăng ký thành công!" : "Đăng ký thất bại").show();
+
+    }
 
     public void setOnLogin(Consumer<String> onLogin) {
         this.onLogin = onLogin;
     }
 
+
     @FXML
     private void initialize() {
-        // confirmBox hidden by default
-        confirmBox.setManaged(false);
-        confirmBox.setVisible(false);
 
         // cute pulse heart
         ScaleTransition pulse = new ScaleTransition(Duration.seconds(1), heartEmoji);
-        pulse.setFromX(1.0); pulse.setFromY(1.0);
-        pulse.setToX(1.2);   pulse.setToY(1.2);
+        pulse.setFromX(1.0);
+        pulse.setFromY(1.0);
+        pulse.setToX(1.2);
+        pulse.setToY(1.2);
         pulse.setAutoReverse(true);
         pulse.setCycleCount(Animation.INDEFINITE);
         pulse.play();
@@ -59,39 +110,27 @@ public class LoginController {
     }
 
     private void addHoverScale(Label lbl) {
-        lbl.setOnMouseEntered(e -> { lbl.setScaleX(1.2); lbl.setScaleY(1.2); lbl.setRotate(lbl == catEmoji ? 10 : -10); });
-        lbl.setOnMouseExited(e -> { lbl.setScaleX(1.0); lbl.setScaleY(1.0); lbl.setRotate(0); });
+        lbl.setOnMouseEntered(e -> {
+            lbl.setScaleX(1.2);
+            lbl.setScaleY(1.2);
+            lbl.setRotate(lbl == catEmoji ? 10 : -10);
+        });
+        lbl.setOnMouseExited(e -> {
+            lbl.setScaleX(1.0);
+            lbl.setScaleY(1.0);
+            lbl.setRotate(0);
+        });
     }
 
     @FXML
     private void onToggleMode() {
-        isRegister = !isRegister;
+        isLogin = !isLogin;
 
-        confirmBox.setManaged(isRegister);
-        confirmBox.setVisible(isRegister);
 
-        submitBtn.setText(isRegister ? "🐰 Đăng ký ngay!" : "🐱 Đăng nhập thôi!");
-        toggleBtn.setText(isRegister ? "🐱 Đã có tài khoản? Đăng nhập" : "🐰 Chưa có tài khoản? Đăng ký");
+        submitBtn.setText(isLogin ? "🐰 Đăng ký ngay!" : "🐱 Đăng nhập thôi!");
+        toggleBtn.setText(isLogin ? "🐱 Đã có tài khoản? Đăng nhập" : "🐰 Chưa có tài khoản? Đăng ký");
     }
 
-    @FXML
-    private void onSubmit() {
-        String username = usernameField.getText() == null ? "" : usernameField.getText().trim();
-        if (username.isEmpty()) return;
-
-        if (isRegister) {
-            // tối giản: chỉ check confirm == password (bạn nối vào core sau)
-            String p1 = passwordField.getText() == null ? "" : passwordField.getText();
-            String p2 = confirmPasswordField.getText() == null ? "" : confirmPasswordField.getText();
-            if (!p1.equals(p2)) {
-                // bạn có thể show alert đẹp hơn sau
-                new Alert(Alert.AlertType.WARNING, "Mật khẩu xác nhận không khớp 💔").show();
-                return;
-            }
-        }
-
-        if (onLogin != null) onLogin.accept(username);
-    }
 
     private void spawnFloatingAnimals() {
         // 8 floating emoji like TSX

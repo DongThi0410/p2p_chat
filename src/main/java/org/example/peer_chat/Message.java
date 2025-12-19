@@ -1,11 +1,14 @@
 package org.example.peer_chat;
 
-public class Message {
+public class Message implements ChatItem {
     private final String fromUser;
     private final String toUser;
     private final String content;
     private final boolean file;
     private final String filePath;
+    private long ts;
+
+    public long getTimestamp() { return ts; }
 
     public Message(String fromUser, String toUser, String content, boolean file, String filePath) {
         this.fromUser = fromUser;

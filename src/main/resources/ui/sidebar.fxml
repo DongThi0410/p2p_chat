@@ -41,5 +41,7 @@
     </HBox>
 
     <!-- Contacts List -->
-    <ListView fx:id="contactsListView" onMouseClicked="#onSelectContact" />
+    <ListView fx:id="contactsListView" onMouseClicked="#onSelectContact" prefHeight="400">
+        <!-- type HBox -->
+    </ListView>
 </VBox>

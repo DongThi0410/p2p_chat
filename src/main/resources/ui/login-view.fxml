@@ -47,16 +47,16 @@
                            promptText="Mật khẩu 🔒"
                            styleClass="login-input login-input-password"/>
 
-            <!-- Confirm password (only when register) -->
-            <VBox fx:id="confirmBox" spacing="8">
-                <PasswordField fx:id="confirmPasswordField"
-                               promptText="Xác nhận mật khẩu 💖"
-                               styleClass="login-input login-input-confirm"/>
-            </VBox>
+
 
             <Button fx:id="submitBtn"
-                    text="🐱 Đăng nhập thôi!"
-                    onAction="#onSubmit"
+                    text="🐱 Đăng nhập"
+                    onAction="#onLogin"
+                    styleClass="login-submit"/>
+
+            <Button fx:id="registerBtn"
+                    text="🐱 Đăng Kys"
+                    onAction="#onRegister"
                     styleClass="login-submit"/>
 
         </VBox>

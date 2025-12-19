@@ -12,6 +12,9 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 import org.example.peer_chat.PeerHandle;
 
+import javax.sound.sampled.LineUnavailableException;
+import java.net.SocketException;
+
 public class VoiceCallController {
     @FXML
     private Text callDuration;
@@ -44,30 +47,64 @@ public class VoiceCallController {
     private static VoiceCallController activeInstance;
 
     public void initialize() {
+        activeInstance = this;
+        System.out.println("[VoiceCallController] activeInstance registered");
         // Set up UI
         updateCallUI(false);
         callTypeLabel.setText("Cuộc gọi thoại ");
 
         // Set button actions
-        endCallButton.setOnAction(e -> endCall());
+//        endCallButton.setOnAction(e -> endCall());
         muteButton.setOnAction(e -> toggleMute());
-        acceptCallButton.setOnAction(e -> acceptIncomingCall());
-        rejectCallButton.setOnAction(e -> rejectIncomingCall());
-        
+        acceptCallButton.setOnAction(e -> {
+            try {
+                onAccept();
+            } catch (SocketException ex) {
+                throw new RuntimeException(ex);
+            } catch (LineUnavailableException ex) {
+                throw new RuntimeException(ex);
+            }
+        });        rejectCallButton.setOnAction(e -> rejectIncomingCall());
+
         // Đảm bảo endCallButton luôn visible và enabled khi cần
         endCallButton.setVisible(true);
-        endCallButton.setDisable(true); // Disable ban đầu, sẽ enable khi inCall
+        endCallButton.setDisable(false); // Disable ban đầu, sẽ enable khi inCall
 
-        // Register this instance as active
+        //
+        endCallButton.setOnMouseClicked(e ->
+                System.out.println("END BUTTON MOUSE CLICK")
+        );
+        rejectCallButton.setOnMouseClicked(e -> {
+            System.out.println("🔥 REJECT BUTTON RAW MOUSE CLICK");
+        });
+
+    }
+    @FXML
+    private void onAccept() throws SocketException, LineUnavailableException {
+        System.out.println("[VoiceCall] Accept pressed for " + remoteName);
+
+        if (peerHandle == null) {
+            System.err.println("[BUG] peerHandle null on accept");
+            return;
+        }
+
+        peerHandle.acceptCall(remoteName, remoteIp, remoteVoicePort);
+        transitionToInCall();
+    }
+
+    public void onShown() {
         activeInstance = this;
     }
 
-    // ===== Public init methods to link with calling / receive call UI =====
+    public void init(PeerHandle peerHandle, String remoteName, boolean inCall) {
+        this.peerHandle = peerHandle;
+        this.remoteName = remoteName;
 
-    /**
-     * Bên A (người gọi): cấu hình UI "Đang gọi ..." tới remoteName.
-     * KHÔNG start timer, chỉ hiển thị "Đang gọi..." cho đến khi nhận CALL_ACCEPT.
-     */
+        if (inCall) {
+            startInCallUI();
+        }
+    }
+
     public void initOutgoing(PeerHandle peerHandle, String remoteName) {
         this.peerHandle = peerHandle;
         this.remoteName = remoteName;
@@ -93,61 +130,36 @@ public class VoiceCallController {
         showIncomingCallUI();
     }
 
-    /**
-     * Bên B sau khi đã nhận cuộc gọi từ ReceiveCall.fxml: cấu hình UI
-     * voice-call-view
-     * để hiển thị trong trình gọi (timer chạy, không hiển thị nút Chấp nhận/Hủy).
-     */
-    public void initIncomingAccepted(PeerHandle peerHandle, String callerName) {
-        this.peerHandle = peerHandle;
-        this.remoteName = callerName;
-
-        startInCallUI();
-    }
-
-    /**
-     * Bên A (hoặc B) sau khi nhận được tín hiệu CALL_ACCEPT từ peer: chuyển sang
-     * UI đang trong cuộc gọi với timer chạy.
-     */
     public void showInCall(String peerName) {
         this.remoteName = peerName;
         startInCallUI();
     }
 
-    /**
-     * Cập nhật UI từ trạng thái "Đang gọi..." sang "Đang trong cuộc gọi" với timer.
-     * Dùng cho bên A khi nhận CALL_ACCEPT.
-     */
     public void transitionToInCall() {
         startInCallUI();
     }
 
     @FXML
-    private void acceptIncomingCall() {
-        startInCallUI();
+    private void rejectIncomingCall() {
+        System.out.println("Đã từ chối cuộc gọi");
+        showStatusMessage("Đã từ chối cuộc gọi");
 
         if (peerHandle != null && remoteName != null) {
-            peerHandle.acceptCall(remoteName, remoteIp, remoteVoicePort);
+            peerHandle.rejectCall(remoteName);
         }
-    }
 
-    @FXML
-    private void rejectIncomingCall() {
-        showStatusMessage("Đã từ chối cuộc gọi");
-        // hiện tại không có tín hiệu CALL_REJECT, chỉ cần đóng UI
         closeWindow();
     }
 
+
     @FXML
-    public void endCall() {
-        // Gửi CALL_END và trigger onCallEnded() callback
-        // Không đóng window ở đây, để onCallEnded() callback xử lý
-        // để đảm bảo cả hai bên đều đóng window và hiển thị popup
-        if (peerHandle != null) {
-            peerHandle.stopVoiceCall();
+    public void endCall() throws SocketException, LineUnavailableException {
+        if (peerHandle == null) {
+            System.out.println("[UI] endCall() called, peerHandle=" + peerHandle);
+
         }
-        // stopVoiceCall() sẽ gọi listener.onCallEnded()
-        // MainController.onCallEnded() sẽ đóng window và hiển thị popup
+        peerHandle.stopVoiceCall();
+
     }
 
     @FXML
@@ -156,10 +168,11 @@ public class VoiceCallController {
         muteButton.getStyleClass().removeAll("active");
         if (isMuted) {
             muteButton.getStyleClass().add("active");
-            // TODO: Implement mute functionality
         }
     }
-
+    public long getDurationSeconds() {
+        return durationInSeconds;
+    }
     private void startCallTimer() {
         stopCallTimer();
         durationInSeconds = 0;
@@ -182,10 +195,6 @@ public class VoiceCallController {
         callDuration.setText(String.format("%02d:%02d", minutes, seconds));
     }
 
-    /**
-     * Đưa UI vào trạng thái đang trong cuộc gọi: hiển thị timer, ẩn nút chấp
-     * nhận/từ chối.
-     */
     private void startInCallUI() {
         isInCall = true;
         updateCallUI(true);
@@ -195,25 +204,34 @@ public class VoiceCallController {
 
     private void updateCallUI(boolean inCall) {
         isInCall = inCall;
-        // Enable và hiển thị endCallButton khi đang trong cuộc gọi
-        endCallButton.setDisable(!inCall);
+
         endCallButton.setVisible(inCall);
+        endCallButton.setDisable(!inCall);
+
         muteButton.setVisible(inCall);
         callDuration.setVisible(inCall);
 
-        // Hide accept/reject buttons during call
-        if (inCall) {
-            acceptCallButton.setVisible(false);
-            rejectCallButton.setVisible(false);
-        }
+        // Khi đã vào call → ẩn accept/reject
+        acceptCallButton.setVisible(false);
+        rejectCallButton.setVisible(false);
     }
 
     private void showIncomingCallUI() {
+        // Incoming = chưa inCall
+        isInCall = false;
+
         acceptCallButton.setVisible(true);
         rejectCallButton.setVisible(true);
+
+        acceptCallButton.setDisable(false);
+        rejectCallButton.setDisable(false);
+
         endCallButton.setVisible(false);
         muteButton.setVisible(false);
+        callDuration.setVisible(false);
+
     }
+
 
     private void resetCallUI() {
         isInCall = false;
@@ -253,23 +271,24 @@ public class VoiceCallController {
                 stage.close();
             }
         }
-        // Clear active instance when window is closed
         if (activeInstance == this) {
             activeInstance = null;
         }
     }
-
     /**
      * Called from outside (MainController) when remote side sends CALL_END.
      * Ensures the active voice call window is closed on the callee/caller side as
      * well.
      */
     public static void closeActiveOnRemoteEnded() {
+        System.out.println("[DEBUG] closeActiveOnRemoteEnded called, activeInstance=" + activeInstance);
+
+        System.out.println("Active instance: " + activeInstance);
         if (activeInstance != null) {
-            if (activeInstance.callDurationTimer != null) {
-                activeInstance.callDurationTimer.stop();
-            }
             activeInstance.closeWindow();
+        } else {
+            System.out.println("No active instance to close");
         }
+
     }
 }

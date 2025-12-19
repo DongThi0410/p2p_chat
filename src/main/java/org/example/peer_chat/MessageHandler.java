@@ -1,15 +1,17 @@
 package org.example.peer_chat;
 
+import javax.sound.sampled.LineUnavailableException;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 
 public class MessageHandler {
     private final String selfName;
     private final ServerSocket serverSocket;
     private volatile boolean running = true;
 
-    public interface MsgCallback { void onMessage(String sender, String message); }
+    public interface MsgCallback { void onMessage(String sender, String message) throws SocketException, LineUnavailableException; }
     public interface FileCallback { void onFileReceived(String sender, String filename, String absPath, long size); }
 
     private final MsgCallback msgCallback;
@@ -65,6 +67,8 @@ public class MessageHandler {
             }
         } catch (IOException e) {
             System.err.println("[MessageHandler error] " + e.getMessage());
+        } catch (LineUnavailableException e) {
+            throw new RuntimeException(e);
         } finally {
             try { s.close(); } catch (IOException ignored) {}
         }

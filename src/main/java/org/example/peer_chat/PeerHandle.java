@@ -2,10 +2,7 @@ package org.example.peer_chat;
 
 import javax.sound.sampled.LineUnavailableException;
 import java.io.IOException;
-import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.ServerSocket;
+import java.net.*;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
@@ -20,7 +17,7 @@ public class PeerHandle {
     private final ChatDb db;
     private final MessageHandler messageHandler;
     private final PeerDiscovery discovery;
-    private final VoiceEngine voiceEngine;
+    private VoiceEngine voiceEngine;
 
     // cache: peerName -> "ip:tcpPort"
     private final Map<String, String> cachedPeers = new ConcurrentHashMap<>();
@@ -28,25 +25,22 @@ public class PeerHandle {
     private MessageListener listener;
     private volatile boolean inCall = false;
     private volatile String currentCallPeer = null;
-
-    public PeerHandle(String name, ChatDb db) throws IOException, LineUnavailableException {
+    int localVoicePort;
+    public PeerHandle(String name, ChatDb db) throws IOException {
         this.name = name;
         this.db = db;
 
         this.serverSocket = new ServerSocket(0);
         this.listenPort = serverSocket.getLocalPort();
 
-        // create local voice UDP port (random)
-        int localVoicePort = chooseRandomPort();
+         localVoicePort = chooseRandomPort();
 
         this.messageHandler = new MessageHandler(this.name, serverSocket, this::onIncomingMessage,
                 this::onIncomingFile);
-        this.voiceEngine = new VoiceEngine(localVoicePort);
+//        this.voiceEngine = new VoiceEngine(localVoicePort);
 
-        // discovery announces tcp port and voice port appended to addr via cached value
         this.discovery = new PeerDiscovery(this.name, this.listenPort, (peerName, addr) -> {
-            // addr is "ip:tcpPort" — keep as-is, but we will request voice port through
-            // CALL_REQUEST
+
             String old = cachedPeers.put(peerName, addr);
             if (old == null || !old.equals(addr)) {
                 System.out.println("[Discovered peer] " + peerName + " -> " + addr);
@@ -57,7 +51,12 @@ public class PeerHandle {
 
         System.out.printf("[PeerHandle] %s TCP:%d VOICE:%d%n", name, listenPort, localVoicePort);
     }
-
+    private VoiceEngine getVoiceEngine() throws LineUnavailableException, SocketException {
+        if (voiceEngine == null) {
+            voiceEngine = new VoiceEngine(localVoicePort);
+        }
+        return voiceEngine;
+    }
     private int chooseRandomPort() {
         try (java.net.ServerSocket s = new java.net.ServerSocket(0)) {
             return s.getLocalPort();
@@ -70,16 +69,28 @@ public class PeerHandle {
         return name;
     }
 
-    public int getListenPort() {
-        return listenPort;
-    }
-
     public void setListener(MessageListener listener) {
         this.listener = listener;
     }
 
     public List<String> getPeerList() {
         return cachedPeers.keySet().stream().sorted().collect(Collectors.toList());
+    }
+    public void removePeer(String peerName) {
+        cachedPeers.remove(peerName);
+        if (listener != null) {
+            listener.onMessage("SYSTEM", "Peer offline: " + peerName);
+            System.out.println("[removePeer] Peer offline: " + peerName);
+        }
+    }
+    public void broadcastOffline() {
+        for (String peerName : cachedPeers.keySet()) {
+            sendToByName(peerName, "SYSTEM|OFFLINE|" + name);
+        }
+    }
+    public void logout() {
+        broadcastOffline();    // gửi tới các peer khác trước
+        removePeer(name);  // xóa khỏi cachedPeers của chính mình
     }
 
     public String lookup(String peerName) {
@@ -110,7 +121,7 @@ public class PeerHandle {
 
     // start a call: send request to target; when accept received, both sides will
     // start voiceEngine
-    public void startVoiceCall(String peerName) {
+    public void startVoiceCall(String peerName) throws SocketException, LineUnavailableException {
         if (inCall) {
             System.out.println("[Call] Already in call");
             return;
@@ -130,13 +141,14 @@ public class PeerHandle {
         // addr = ip:tcpPort
         // send CALL_REQUEST|callerName|callerIp|callerVoicePort
         String myIp = getLocalAddress();
-        String msg = "CALL_REQUEST|" + name + "|" + myIp + "|" + voiceEngine.getLocalPort();
+        String msg = "CALL_REQUEST|" + name + "|" + myIp + "|" + getVoiceEngine().getLocalPort();
+
         messageHandler.sendText(addr, msg);
         System.out.println("[Call] requested call to " + peerName + " via " + addr);
     }
 
     // start a video call: similar to voice call but with VIDEO signaling
-    public void startVideoCall(String peerName) {
+    public void startVideoCall(String peerName) throws SocketException, LineUnavailableException {
         if (inCall) {
             System.out.println("[VideoCall] Already in call");
             return;
@@ -153,17 +165,16 @@ public class PeerHandle {
 
         // send CALL_REQUEST_VIDEO|callerName|callerIp|callerVoicePort
         String myIp = getLocalAddress();
-        String msg = "CALL_REQUEST_VIDEO|" + name + "|" + myIp + "|" + voiceEngine.getLocalPort();
+        String msg = "CALL_REQUEST_VIDEO|" + name + "|" + myIp + "|" + getVoiceEngine().getLocalPort();
         messageHandler.sendText(addr, msg);
         System.out.println("[VideoCall] requested video call to " + peerName + " via " + addr);
     }
 
     // called when user accepts an incoming CALL_REQUEST
-    public void acceptCall(String callerName, String callerIp, int callerVoicePort) {
+    public void acceptCall(String callerName, String callerIp, int callerVoicePort) throws SocketException, LineUnavailableException {
 
         if (inCall)
             return;
-        // đánh dấu đang trong cuộc gọi với callerName
         currentCallPeer = callerName;
         inCall = true;
 
@@ -171,24 +182,24 @@ public class PeerHandle {
 
         if (addr != null) {
             String myIp = getLocalAddress();
-            String resp = "CALL_ACCEPT|" + name + "|" + myIp + "|" + voiceEngine.getLocalPort();
+            String resp = "CALL_ACCEPT|" + name + "|" + myIp + "|" + getVoiceEngine().getLocalPort();
             messageHandler.sendText(addr, resp);
         }
         // start local voice engine to send/receive to caller
-        voiceEngine.start(callerIp, callerVoicePort);
+        getVoiceEngine().start(callerIp, callerVoicePort);
         System.out.println("[Call] accepted and started voice with " + callerName);
 
         // Notify UI that call has started (for side B - the accepter)
         if (listener != null) {
-            listener.onCallStarted(callerName);
+            listener.onVoiceCallStarted(callerName);
         }
     }
 
     // called when user accepts an incoming CALL_REQUEST_VIDEO
-    public void acceptVideoCall(String callerName, String callerIp, int callerVoicePort) {
+    public void acceptVideoCall(String callerName, String callerIp, int callerVoicePort) throws SocketException, LineUnavailableException {
         if (inCall)
             return;
-        
+
         currentCallPeer = callerName;
         inCall = true;
 
@@ -196,37 +207,53 @@ public class PeerHandle {
 
         if (addr != null) {
             String myIp = getLocalAddress();
-            String resp = "CALL_ACCEPT_VIDEO|" + name + "|" + myIp + "|" + voiceEngine.getLocalPort();
+            String resp = "CALL_ACCEPT_VIDEO|" + name + "|" + myIp + "|" + getVoiceEngine().getLocalPort();
             messageHandler.sendText(addr, resp);
         }
-        // start local voice engine to send/receive to caller
-        voiceEngine.start(callerIp, callerVoicePort);
+        getVoiceEngine().start(callerIp, callerVoicePort);
         System.out.println("[VideoCall] accepted and started video call with " + callerName);
 
         // Notify UI that video call has started (for side B - the accepter)
         if (listener != null) {
-            listener.onCallStarted(callerName);
+            listener.onVideoCallStarted(callerName);
         }
     }
 
-    public void stopVoiceCall() {
-        if (!inCall)
-            return;
-        voiceEngine.stop();
-        if (currentCallPeer != null) {
-            String addr = lookup(currentCallPeer);
+    public void stopVoiceCall() throws SocketException, LineUnavailableException {
+        System.out.println("[Peer] stopVoiceCall()");
+        System.out.println("[Peer] inCall=" + inCall);
+        System.out.println("[Peer] currentCallPeer=" + currentCallPeer);
+        String peer = currentCallPeer;
+
+        getVoiceEngine().stop();
+
+        if (peer != null) {
+            String addr = lookup(peer);
             if (addr != null) {
+                System.out.println("[Peer] sending CALL_END to " + peer);
                 messageHandler.sendText(addr, "CALL_END|" + name);
             }
         }
-        if (listener != null && currentCallPeer != null)
-            listener.onCallEnded(currentCallPeer);
         inCall = false;
         currentCallPeer = null;
+
+        // Notify listener that call has ended
+        if (listener != null) {
+            listener.onCallEnded(peer);
+        }
     }
 
-    private void onIncomingMessage(String sender, String message) {
+    private void onIncomingMessage(String sender, String message) throws SocketException, LineUnavailableException {
         // signaling: CALL_REQUEST|caller|ip|voicePort
+        if (message != null && message.startsWith("SYSTEM|OFFLINE|")) {
+            String offlineUser = message.split("\\|")[2];
+            cachedPeers.remove(offlineUser);
+
+            if (listener != null) {
+                listener.onMessage("SYSTEM", "Peer offline:" + offlineUser);
+            }
+            return;
+        }
         if (message != null && message.startsWith("CALL_REQUEST|")) {
             String[] p = message.split("\\|");
             if (p.length == 4) {
@@ -265,13 +292,13 @@ public class PeerHandle {
                 // other side accepted — start voice engine towards accepter
                 currentCallPeer = accepter;
                 inCall = true;
-                voiceEngine.start(ip, voicePort);
+                getVoiceEngine().start(ip, voicePort);
                 System.out
                         .println("[Call] remote accepted. starting voice to " + accepter + "@" + ip + ":" + voicePort);
 
                 // notify UI so caller side can transition from Calling.fxml to VoiceCall UI
                 if (listener != null)
-                    listener.onCallStarted(accepter);
+                    listener.onVoiceCallStarted(accepter);
                 return;
             }
         }
@@ -285,26 +312,47 @@ public class PeerHandle {
                 // other side accepted video call — start voice engine towards accepter
                 currentCallPeer = accepter;
                 inCall = true;
-                voiceEngine.start(ip, voicePort);
+                getVoiceEngine().start(ip, voicePort);
                 System.out.println("[VideoCall] remote accepted. starting video call to " + accepter + "@" + ip + ":" + voicePort);
 
                 // notify UI so caller side can transition from "Đang gọi..." to VideoCallModal UI
                 if (listener != null)
-                    listener.onCallStarted(accepter);
+                    listener.onVideoCallStarted(accepter);
                 return;
             }
         }
-        
+
         if (message != null && message.startsWith("CALL_END|")) {
             String[] p = message.split("\\|");
-            String ender = p[1];
+            if (p.length >= 2) {  // Add length check for safety
+                String ender = p[1];
+                System.out.println("[Peer] Received CALL_END from " + ender);
 
-            voiceEngine.stop();
+                // Stop voice engine and clean up
+                getVoiceEngine().stop();
+                inCall = false;
+                currentCallPeer = null;
+
+                // Notify UI
+                if (listener != null) {
+                    listener.onCallEnded(ender);
+                }
+            }
+            return;  // Important: return after handling CALL_END
+        }
+
+        if (message != null && message.startsWith("CALL_REJECT|")) {
+            String[] p = message.split("\\|");
+            String rejecter = p[1];
+
+            System.out.println("[Call] rejected by " + rejecter);
+
             inCall = false;
+            currentCallPeer = null;
 
-            if (listener != null)
-                listener.onCallEnded(ender);
-
+            if (listener != null) {
+                listener.onCallRejected(rejecter);
+            }
             return;
         }
 
@@ -320,14 +368,25 @@ public class PeerHandle {
             listener.onFileReceived(sender, filename, absPath, size);
     }
 
-    public void shutdown() {
+    public void rejectCall(String callerName) {
+        String addr = lookup(callerName);
+        if (addr != null) {
+            messageHandler.sendText(addr, "CALL_REJECT|" + name);
+        }
+    }
+
+    public void shutdown() throws SocketException, LineUnavailableException {
         discovery.stop();
         messageHandler.stop();
         try {
             serverSocket.close();
-        } catch (IOException ignored) {
+        } catch (IOException ignored) {}
+
+        if (voiceEngine != null) {
+            voiceEngine.shutdown();
+
+            voiceEngine = null;
         }
-        voiceEngine.shutdown(); // Dùng shutdown() thay vì stop() để đóng socket hoàn toàn
     }
 
     // helper to get local IP (best-effort)

@@ -15,6 +15,7 @@ import javafx.stage.Stage;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.SocketException;
 import java.util.List;
 
 import javax.sound.sampled.LineUnavailableException;
@@ -65,58 +66,63 @@ public class App extends Application {
             }
             try {
                 peer = new PeerHandle(n, db);
-            } catch (IOException | LineUnavailableException ex) {
+            } catch (IOException ex) {
                 status.setText("Init error: " + ex.getMessage());
                 ex.printStackTrace();
                 return;
             }
             myName = n;
-            peer.setListener(new MessageListener() {
-                @Override
-                public void onMessage(String sender, String msg) {
-                    Platform.runLater(() -> appendMessage(sender + ": " + msg));
-                }
-
-                @Override
-                public void onFileReceived(String sender, String filename, String absolutePath, long size) {
-                    Platform.runLater(() -> appendMessage(sender + ": 📂 " + filename));
-                }
-
-                @Override
-                public void onIncomingCall(String callerName, String callerIp, int callerVoicePort) {
-                    Platform.runLater(() -> showIncomingCallPopup(callerName, callerIp, callerVoicePort));
-                }
-
-                @Override
-                public void onIncomingVideoCall(String callerName, String callerIp, int callerVoicePort) {
-                    Platform.runLater(() -> showIncomingCallPopup(callerName, callerIp, callerVoicePort));
-                }
-
-                @Override
-                public void onCallStarted(String peerName) {
-                    Platform.runLater(() -> {
-                        callStatusLabel.setText("📞 In call with " + peerName);
-                        callBtn.setDisable(true);
-
-                        showCallModal(peerName);       // <<< THÊM VÀO
-                    });
-                }
-
-                @Override
-                public void onCallEnded(String peerName) {
-                    Platform.runLater(() -> {
-                        if (callModal != null) {
-                            callModal.close();
-                            callModal = null;
-                        }
-                        callStatusLabel.setText("");
-                        callBtn.setDisable(false);
-
-                        showCallEndedPopup(peerName);
-
-                    });
-                }
-            });
+//            peer.setListener(new MessageListener() {
+//                @Override
+//                public void onMessage(String sender, String msg) {
+//                    Platform.runLater(() -> appendMessage(sender + ": " + msg));
+//                }
+//
+//                @Override
+//                public void onFileReceived(String sender, String filename, String absolutePath, long size) {
+//                    Platform.runLater(() -> appendMessage(sender + ": 📂 " + filename));
+//                }
+//
+//                @Override
+//                public void onIncomingCall(String callerName, String callerIp, int callerVoicePort) {
+//                    Platform.runLater(() -> showIncomingCallPopup(callerName, callerIp, callerVoicePort));
+//                }
+//
+//                @Override
+//                public void onIncomingVideoCall(String callerName, String callerIp, int callerVoicePort) {
+//                    Platform.runLater(() -> showIncomingCallPopup(callerName, callerIp, callerVoicePort));
+//                }
+//
+//                @Override
+//                public void onVoiceCallStarted(String peerName) {
+//                    Platform.runLater(() -> {
+//                        callStatusLabel.setText("📞 In call with " + peerName);
+//                        callBtn.setDisable(true);
+//
+//                        showCallModal(peerName);       // <<< THÊM VÀO
+//                    });
+//                }
+//
+//                @Override
+//                public void onVideoCallStarted(String peerName){
+//                }
+//
+//
+//                @Override
+//                public void onCallEnded(String peerName) {
+//                    Platform.runLater(() -> {
+//                        if (callModal != null) {
+//                            callModal.close();
+//                            callModal = null;
+//                        }
+//                        callStatusLabel.setText("");
+//                        callBtn.setDisable(false);
+//
+//                        showCallEndedPopup(peerName);
+//
+//                    });
+//                }
+//            });
             showChatScreen(stage);
         });
 
@@ -167,7 +173,15 @@ public class App extends Application {
         callBtn.setOnAction(e -> {
             String t = peerListView.getSelectionModel().getSelectedItem();
             if (t == null) appendMessage("[Error] select peer");
-            else peer.startVoiceCall(t);
+            else {
+                try {
+                    peer.startVoiceCall(t);
+                } catch (SocketException ex) {
+                    throw new RuntimeException(ex);
+                } catch (LineUnavailableException ex) {
+                    throw new RuntimeException(ex);
+                }
+            }
         });
 
 
@@ -299,7 +313,13 @@ public class App extends Application {
         accept.setOnAction(e -> {
             popup.close();
             // accept: notify PeerHandle to accept (sends CALL_ACCEPT back) and start voice engine locally
-            peer.acceptCall(callerName, callerIp, callerVoicePort);
+            try {
+                peer.acceptCall(callerName, callerIp, callerVoicePort);
+            } catch (SocketException ex) {
+                throw new RuntimeException(ex);
+            } catch (LineUnavailableException ex) {
+                throw new RuntimeException(ex);
+            }
         });
 
         reject.setOnAction(e -> {
@@ -330,7 +350,13 @@ public class App extends Application {
 
         Button endCall = new Button("End Call");
         endCall.setOnAction(e -> {
-            peer.stopVoiceCall();
+            try {
+                peer.stopVoiceCall();
+            } catch (SocketException ex) {
+                throw new RuntimeException(ex);
+            } catch (LineUnavailableException ex) {
+                throw new RuntimeException(ex);
+            }
             callModal.close();
         });
 

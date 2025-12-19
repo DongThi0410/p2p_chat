@@ -18,7 +18,7 @@
         <VBox alignment="CENTER" spacing="20">
             <Label text="A đang gọi cho bạn..." style="-fx-font-size: 16px;" />
             <Button text="Chấp nhận" onAction="#onAcceptCall" style="-fx-background-color: green; -fx-text-fill: white;" />
-            <Button text="Hủy" onAction="#onRejectCall" style="-fx-background-color: red; -fx-text-fill: white;" />
+            <Button text="Từ chối" onAction="#rejectIncomingCall" style="-fx-background-color: red; -fx-text-fill: white;" />
         </VBox>
     </center>
 </BorderPane>
