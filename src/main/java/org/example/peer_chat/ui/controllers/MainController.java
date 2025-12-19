@@ -248,6 +248,20 @@ public class MainController implements MessageListener {
         });
     }
 
+    @Override
+    public void onRemoteVideoOn(String peerName) {
+        Platform.runLater(() -> {
+            VideoCallModalController.setRemoteVideoEnabled(true);
+        });
+    }
+
+    @Override
+    public void onRemoteVideoOff(String peerName) {
+        Platform.runLater(() -> {
+            VideoCallModalController.setRemoteVideoEnabled(false);
+        });
+    }
+
 
     private void startSidebarAutoRefresh() {
         Thread t = new Thread(() -> {

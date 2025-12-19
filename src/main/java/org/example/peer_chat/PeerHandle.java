@@ -46,11 +46,22 @@ public class PeerHandle {
 
         this.discovery = new PeerDiscovery(this.name, this.listenPort, (peerName, addr) -> {
 
-            String old = cachedPeers.put(peerName, addr);
-            if (old == null || !old.equals(addr)) {
+            String old = cachedPeers.get(peerName);
+
+            // Nếu chưa có entry cho peer này -> lưu lại và thông báo online
+            if (old == null) {
+                cachedPeers.put(peerName, addr);
                 System.out.println("[Discovered peer] " + peerName + " -> " + addr);
                 if (listener != null)
                     listener.onMessage("SYSTEM", "Peer online: " + peerName);
+                return;
+            }
+
+            // Nếu đã biết peerName nhưng với địa chỉ khác, bỏ qua để tránh
+            // bị nhảy qua lại giữa nhiều instance trùng tên (ổn định hơn).
+            if (!old.equals(addr)) {
+                System.out.println("[Discovered peer] duplicate name " + peerName + 
+                        " at " + addr + ", keeping existing " + old);
             }
         });
 
@@ -273,6 +284,20 @@ public class PeerHandle {
         }
     }
 
+    public void sendVideoOn(String peerName) {
+        String addr = lookup(peerName);
+        if (addr != null) {
+            messageHandler.sendText(addr, "CALL_VIDEO_ON|" + name);
+        }
+    }
+
+    public void sendVideoOff(String peerName) {
+        String addr = lookup(peerName);
+        if (addr != null) {
+            messageHandler.sendText(addr, "CALL_VIDEO_OFF|" + name);
+        }
+    }
+
     private void onIncomingMessage(String sender, String message) throws SocketException, LineUnavailableException {
         // signaling: CALL_REQUEST|caller|ip|voicePort
         if (message != null && message.startsWith("SYSTEM|OFFLINE|")) {
@@ -393,6 +418,24 @@ public class PeerHandle {
 
             if (listener != null) {
                 listener.onCallRejected(rejecter);
+            }
+            return;
+        }
+
+        if (message != null && message.startsWith("CALL_VIDEO_ON|")) {
+            String[] p = message.split("\\|", 2);
+            if (p.length >= 2 && listener != null) {
+                String peerName = p[1];
+                listener.onRemoteVideoOn(peerName);
+            }
+            return;
+        }
+
+        if (message != null && message.startsWith("CALL_VIDEO_OFF|")) {
+            String[] p = message.split("\\|", 2);
+            if (p.length >= 2 && listener != null) {
+                String peerName = p[1];
+                listener.onRemoteVideoOff(peerName);
             }
             return;
         }

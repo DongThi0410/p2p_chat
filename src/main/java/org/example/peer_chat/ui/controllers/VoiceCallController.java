@@ -156,10 +156,11 @@ public class VoiceCallController {
     public void endCall() throws SocketException, LineUnavailableException {
         if (peerHandle == null) {
             System.out.println("[UI] endCall() called, peerHandle=" + peerHandle);
-
+            // Không có PeerHandle để gửi CALL_END, chỉ cần đóng window local
+            closeWindow();
+            return;
         }
         peerHandle.stopVoiceCall();
-
     }
 
     @FXML

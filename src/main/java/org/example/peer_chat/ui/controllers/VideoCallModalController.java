@@ -79,6 +79,9 @@ public class VideoCallModalController {
     private Webcam webcam;
     private Timeline videoUpdateTimer;
 
+    // state of remote peer's video (updated via CALL_VIDEO_ON/OFF)
+    private static volatile boolean remoteVideoEnabled = true;
+
     @FXML
     public void initialize() {
         contactName.setText("Contact Name");
@@ -190,14 +193,15 @@ public class VideoCallModalController {
             }
 
             // Nếu webcam chưa open thì mới set resolution + open.
+            // Giảm độ phân giải xuống 176x144 (kích thước nhỏ nhất được webcam-capture hỗ trợ).
             // Thư viện webcam-capture không cho đổi resolution khi đã open.
             if (!webcam.isOpen()) {
-                webcam.setViewSize(new java.awt.Dimension(640, 480));
+                webcam.setViewSize(new java.awt.Dimension(176, 144));
                 webcam.open();
             }
 
-            // Tạo timer để update video feed mỗi 33ms (~30 FPS)
-            videoUpdateTimer = new Timeline(new KeyFrame(Duration.millis(33), e -> updateVideoFrame()));
+            // Tạo timer để update video feed mỗi 200ms (~5 FPS) để giảm tải CPU/băng thông
+            videoUpdateTimer = new Timeline(new KeyFrame(Duration.millis(200), e -> updateVideoFrame()));
             videoUpdateTimer.setCycleCount(Timeline.INDEFINITE);
             videoUpdateTimer.play();
 
@@ -270,6 +274,21 @@ public class VideoCallModalController {
         } catch (Exception e) {
             // Ignore errors during capture
         }
+    }
+
+    public static void setRemoteVideoEnabled(boolean enabled) {
+        remoteVideoEnabled = enabled;
+        VideoCallModalController inst = activeInstance;
+        if (inst == null) return;
+
+        Platform.runLater(() -> {
+            if (inst.remoteVideoFeed != null) {
+                if (!enabled) {
+                    inst.remoteVideoFeed.setImage(null);
+                }
+                // Khi bật lại, frame mới nhận sẽ tự vẽ lại
+            }
+        });
     }
 
     /**
@@ -410,11 +429,17 @@ public class VideoCallModalController {
             if (localVideoFeed != null) {
                 localVideoFeed.setVisible(false);
             }
+            if (peerHandle != null && remoteName != null) {
+                peerHandle.sendVideoOff(remoteName);
+            }
         } else {
             if (localVideoFeed != null) {
                 localVideoFeed.setVisible(true);
             }
             startVideoCapture();
+            if (peerHandle != null && remoteName != null) {
+                peerHandle.sendVideoOn(remoteName);
+            }
         }
     }
 

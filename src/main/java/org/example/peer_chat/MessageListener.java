@@ -10,5 +10,7 @@ public interface MessageListener {
     void onCallEnded(String peerName);
     void onCallRejected(String peerName);
 
+    void onRemoteVideoOn(String peerName);
+    void onRemoteVideoOff(String peerName);
 }
 

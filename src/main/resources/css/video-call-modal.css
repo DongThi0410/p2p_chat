@@ -8,6 +8,14 @@
     -fx-background-color: linear-gradient(to bottom right, #ffe4f1, #f3e8ff);
 }
 
+/* Remote video big blue card in center */
+.remote-video-container {
+    -fx-padding: 24;
+    -fx-background-color: #bfdbfe; /* light blue */
+    -fx-background-radius: 32;
+    -fx-border-radius: 32;
+}
+
 /* Center avatar & name */
 .call-avatar {
     -fx-font-size: 80px;
@@ -67,35 +75,27 @@
 
 /* Bottom controls */
 .call-controls {
-    -fx-spacing: 18;
+    -fx-spacing: 20;
 }
 
 .call-btn {
-    -fx-min-width: 56px;
-    -fx-min-height: 56px;
-    -fx-max-width: 56px;
-    -fx-max-height: 56px;
+    -fx-min-width: 68px;
+    -fx-min-height: 68px;
+    -fx-max-width: 68px;
+    -fx-max-height: 68px;
     -fx-background-radius: 999;
     -fx-border-radius: 999;
-    -fx-font-size: 22px;
+    -fx-font-size: 24px;
     -fx-font-weight: bold;
     -fx-border-width: 3;
-    -fx-text-fill: #111827;
+    -fx-text-fill: white;
 }
 
-.call-btn-mute {
-    -fx-background-color: #dcfce7;
-    -fx-border-color: #4ade80;
-}
-
-.call-btn-video {
-    -fx-background-color: #eff6ff;
-    -fx-border-color: #60a5fa;
-}
-
+.call-btn-mute,
+.call-btn-video,
 .call-btn-screen {
-    -fx-background-color: #f5f3ff;
-    -fx-border-color: #a855f7;
+    -fx-background-color: #60a5fa; /* xanh dương */
+    -fx-border-color: #2563eb;
 }
 
 .call-btn-end {
