@@ -459,6 +459,13 @@ public class ChatAreaController {
             } else if (selectedContact != null) {
                 // peer-to-peer như cũ
                 Message msg = new Message(currentUser, selectedContact, messageText, false, null);
+                msg.setTimestamp(System.currentTimeMillis()); // Set timestamp
+
+                // Lưu vào database trước khi gửi
+                if (chatDb != null) {
+                    chatDb.insertMessage(msg);
+                }
+
                 appendMessage(msg);
                 if (peer != null) {
                     peer.sendToByName(selectedContact, messageText);

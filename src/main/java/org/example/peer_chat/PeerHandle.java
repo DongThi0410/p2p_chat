@@ -694,7 +694,9 @@ public class PeerHandle {
         }
 
         // normal chat message
-        db.insertMessage(new Message(sender, name, message, false, null));
+        Message msg = new Message(sender, name, message, false, null);
+        msg.setTimestamp(System.currentTimeMillis()); // Set timestamp
+        db.insertMessage(msg);
         if (listener != null)
             listener.onMessage(sender, message);
     }
@@ -738,7 +740,9 @@ public class PeerHandle {
             }
             return;
         }
-        db.insertMessage(new Message(sender, name, filename, true, absPath));
+        Message fileMsg = new Message(sender, name, filename, true, absPath);
+        fileMsg.setTimestamp(System.currentTimeMillis()); // Set timestamp
+        db.insertMessage(fileMsg);
         if (listener != null) {
             listener.onFileReceived(sender, filename, absPath, size);
         }

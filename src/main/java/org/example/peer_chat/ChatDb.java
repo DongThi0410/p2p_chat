@@ -142,7 +142,14 @@ public class ChatDb {
             p.setString(3, m.getContent());
             p.setInt(4, m.isFile() ? 1 : 0);
             p.setString(5, m.getFilePath());
-            p.setLong(6, System.currentTimeMillis());
+
+            // Dùng timestamp của Message nếu có, không thì mới dùng currentTimeMillis
+            long timestamp = m.getTimestamp();
+            if (timestamp == 0) {
+                timestamp = System.currentTimeMillis();
+            }
+            p.setLong(6, timestamp);
+
             p.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
