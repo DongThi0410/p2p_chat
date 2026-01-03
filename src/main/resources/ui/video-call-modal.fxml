@@ -7,9 +7,9 @@
 <?import javafx.scene.text.Text?>
 
 <StackPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml"
-           fx:controller="org.example.peer_chat.ui.controllers.VideoCallModalController"
-           stylesheets="@../css/video-call-modal.css"
-           styleClass="call-root">
+    fx:controller="org.example.peer_chat.ui.controllers.VideoCallModalController"
+    stylesheets="@../css/video-call-modal.css"
+    styleClass="call-root">
 
     <!-- Full-screen gradient background -->
     <BorderPane styleClass="call-background">
@@ -19,7 +19,8 @@
             <StackPane styleClass="remote-video-container" BorderPane.alignment="CENTER">
                 <!-- Nền: video đối phương -->
                 <!-- Video fit hầu hết phần nền xanh ở giữa -->
-                <ImageView fx:id="remoteVideoFeed" preserveRatio="true" fitWidth="880" fitHeight="460" />
+                <ImageView fx:id="remoteVideoFeed" preserveRatio="true" fitWidth="880"
+                    fitHeight="460" />
 
                 <!-- Overlay: giao diện cũ ở giữa -->
                 <VBox alignment="CENTER" spacing="16">
@@ -35,7 +36,8 @@
                             <graphic>
                                 <Label>
                                     <graphic>
-                                        <Text fx:id="callDuration" text="00:00" styleClass="call-duration-text" />
+                                        <Text fx:id="callDuration" text="00:00"
+                                            styleClass="call-duration-text" />
                                     </graphic>
                                 </Label>
                             </graphic>
@@ -66,14 +68,20 @@
                     <HBox alignment="CENTER" spacing="18" styleClass="call-controls">
 
                         <!-- Accept / Reject buttons for incoming calls -->
-                        <Button fx:id="acceptButton" text="Chấp nhận" onAction="#onAcceptCall" styleClass="call-btn call-btn-accept" visible="false" />
-                        <Button fx:id="rejectButton" text="Hủy" onAction="#onRejectCall" styleClass="call-btn call-btn-reject" visible="false" />
+                        <Button fx:id="acceptButton" text="Chấp nhận" onAction="#onAcceptCall"
+                            styleClass="call-btn call-btn-accept" visible="false" />
+                        <Button fx:id="rejectButton" text="Hủy" onAction="#onRejectCall"
+                            styleClass="call-btn call-btn-reject" visible="false" />
 
                         <!-- In-call controls (shown during an active call) -->
-                        <Button fx:id="muteButton" text="🔈" onAction="#onToggleMute" styleClass="call-btn call-btn-mute" />
-                        <Button fx:id="videoButton" text="📹" onAction="#onToggleVideo" styleClass="call-btn call-btn-video" />
-                        <Button fx:id="shareScreenButton" text="🖥" onAction="#onToggleScreenSharing" styleClass="call-btn call-btn-screen" />
-                        <Button fx:id="endCallButton" text="✖" onAction="#onEndCall" styleClass="call-btn call-btn-end" />
+                        <Button fx:id="muteButton" text="🔈" onAction="#onToggleMute"
+                            styleClass="call-btn call-btn-mute" />
+                        <Button fx:id="videoButton" text="📹" onAction="#onToggleVideo"
+                            styleClass="call-btn call-btn-video" />
+                        <Button fx:id="shareScreenButton" text="🖥"
+                            onAction="#onToggleScreenSharing" styleClass="call-btn call-btn-screen" />
+                        <Button fx:id="endCallButton" text="✖" onAction="#onEndCall"
+                            styleClass="call-btn call-btn-end" />
                     </HBox>
                 </center>
 
