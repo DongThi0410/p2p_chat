@@ -76,65 +76,185 @@
 
 /* Bottom controls */
 .call-controls {
-    -fx-spacing: 20;
+    -fx-spacing: 24;
+    -fx-alignment: center;
 }
 
-/* Neo-morphism dark buttons inspired by the provided web CSS */
+/* ============================================
+   CALL BUTTON BASE STYLES
+   Premium, modern button with glassmorphism
+   ============================================ */
 .call-btn {
-    /* Remove fixed size to allow padding to take effect */
-    /*
-    -fx-min-width: 68px;
-    -fx-min-height: 68px;
-    -fx-max-width: 68px;
-    -fx-max-height: 68px;
-    */
-    -fx-background-radius: 1.1em;
-    -fx-border-radius: 1.1em;
-    -fx-font-size: 20px;
+    -fx-min-width: 64px;
+    -fx-min-height: 64px;
+    -fx-max-width: 64px;
+    -fx-max-height: 64px;
+    -fx-background-radius: 50%;
+    -fx-border-radius: 50%;
+    -fx-font-size: 24px;
     -fx-font-weight: bold;
     -fx-text-fill: white;
     -fx-cursor: hand;
-    -fx-padding: 1em 2em;
-
-    /* Simulating light source with gradient since we can't have 2 shadows */
-    -fx-background-color: linear-gradient(to bottom right, #2b2b2b, #161616);
-    -fx-border-color: transparent;
-
-    /* Single dark shadow for depth */
-    -fx-effect: dropshadow(gaussian, #000000, 15, 0.3, 10, 10);
+    -fx-padding: 0;
+    -fx-background-color: rgba(40, 40, 50, 0.85);
+    -fx-border-color: rgba(255, 255, 255, 0.15);
+    -fx-border-width: 2px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.4), 12, 0.3, 0, 4);
 }
 
-/* Accent colors per button type */
-.call-btn-mute,
-.call-btn-video,
-.call-btn-screen {
-    /* dùng text/icon trắng trên nền tối, không đổi màu nền mặc định */
-}
-
-.call-btn-end {
-    /* Disable red background to match requested uniform style */
-    /* -fx-background-color: #f97373; */
-}
-
+/* ============================================
+   ACCEPT BUTTON - Vibrant Green
+   ============================================ */
 .call-btn-accept {
-    -fx-text-fill: #4ade80;
+    -fx-background-color: linear-gradient(to bottom, #22c55e, #16a34a);
+    -fx-border-color: rgba(255, 255, 255, 0.25);
+    -fx-text-fill: white;
+    -fx-effect: dropshadow(gaussian, rgba(34, 197, 94, 0.5), 16, 0.4, 0, 4);
 }
 
-.call-btn-reject {
-    -fx-text-fill: #f87171;
+.call-btn-accept:hover {
+    -fx-background-color: linear-gradient(to bottom, #4ade80, #22c55e);
+    -fx-effect: dropshadow(gaussian, rgba(34, 197, 94, 0.7), 20, 0.5, 0, 6);
+    -fx-scale-x: 1.08;
+    -fx-scale-y: 1.08;
 }
 
-/* Hover: Increase shadow depth */
-.call-btn:hover {
-    -fx-effect: dropshadow(gaussian, #000000, 20, 0.4, 12, 12);
-}
-
-/* Pressed: active state - Glow effect + Fuchsia bg */
-.call-btn:pressed {
-    -fx-background-color: #ff00ff;
-    /* fuchsia */
+.call-btn-accept:pressed {
+    -fx-background-color: #16a34a;
     -fx-scale-x: 0.95;
     -fx-scale-y: 0.95;
-    /* Inner shadow to look pressed + outer glow */
-    -fx-effect: dropshadow(gaussian, #ff00ff, 25, 0.5, 0, 0);
+    -fx-effect: dropshadow(gaussian, rgba(34, 197, 94, 0.8), 24, 0.6, 0, 0);
+}
+
+/* ============================================
+   REJECT BUTTON - Soft Red
+   ============================================ */
+.call-btn-reject {
+    -fx-background-color: linear-gradient(to bottom, #f87171, #dc2626);
+    -fx-border-color: rgba(255, 255, 255, 0.2);
+    -fx-text-fill: white;
+    -fx-effect: dropshadow(gaussian, rgba(220, 38, 38, 0.4), 12, 0.3, 0, 4);
+}
+
+.call-btn-reject:hover {
+    -fx-background-color: linear-gradient(to bottom, #fca5a5, #f87171);
+    -fx-effect: dropshadow(gaussian, rgba(220, 38, 38, 0.6), 18, 0.5, 0, 6);
+    -fx-scale-x: 1.08;
+    -fx-scale-y: 1.08;
+}
+
+.call-btn-reject:pressed {
+    -fx-background-color: #b91c1c;
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+    -fx-effect: dropshadow(gaussian, rgba(220, 38, 38, 0.8), 24, 0.6, 0, 0);
+}
+
+/* ============================================
+   END CALL BUTTON - Bold Red
+   ============================================ */
+.call-btn-end {
+    -fx-background-color: linear-gradient(to bottom, #ef4444, #b91c1c);
+    -fx-border-color: rgba(255, 255, 255, 0.2);
+    -fx-text-fill: white;
+    -fx-effect: dropshadow(gaussian, rgba(239, 68, 68, 0.5), 16, 0.4, 0, 4);
+}
+
+.call-btn-end:hover {
+    -fx-background-color: linear-gradient(to bottom, #f87171, #ef4444);
+    -fx-effect: dropshadow(gaussian, rgba(239, 68, 68, 0.7), 20, 0.5, 0, 6);
+    -fx-scale-x: 1.1;
+    -fx-scale-y: 1.1;
+}
+
+.call-btn-end:pressed {
+    -fx-background-color: #991b1b;
+    -fx-scale-x: 0.92;
+    -fx-scale-y: 0.92;
+    -fx-effect: dropshadow(gaussian, rgba(239, 68, 68, 0.9), 28, 0.7, 0, 0);
+}
+
+/* ============================================
+   MUTE BUTTON - Soft Blue
+   ============================================ */
+.call-btn-mute {
+    -fx-background-color: linear-gradient(to bottom, #3b82f6, #2563eb);
+    -fx-border-color: rgba(255, 255, 255, 0.2);
+    -fx-text-fill: white;
+    -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.4), 12, 0.3, 0, 4);
+}
+
+.call-btn-mute:hover {
+    -fx-background-color: linear-gradient(to bottom, #60a5fa, #3b82f6);
+    -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.6), 18, 0.5, 0, 6);
+    -fx-scale-x: 1.08;
+    -fx-scale-y: 1.08;
+}
+
+.call-btn-mute:pressed {
+    -fx-background-color: #1d4ed8;
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+    -fx-effect: dropshadow(gaussian, rgba(59, 130, 246, 0.8), 24, 0.6, 0, 0);
+}
+
+/* ============================================
+   VIDEO BUTTON - Purple
+   ============================================ */
+.call-btn-video {
+    -fx-background-color: linear-gradient(to bottom, #a855f7, #7c3aed);
+    -fx-border-color: rgba(255, 255, 255, 0.2);
+    -fx-text-fill: white;
+    -fx-effect: dropshadow(gaussian, rgba(168, 85, 247, 0.4), 12, 0.3, 0, 4);
+}
+
+.call-btn-video:hover {
+    -fx-background-color: linear-gradient(to bottom, #c084fc, #a855f7);
+    -fx-effect: dropshadow(gaussian, rgba(168, 85, 247, 0.6), 18, 0.5, 0, 6);
+    -fx-scale-x: 1.08;
+    -fx-scale-y: 1.08;
+}
+
+.call-btn-video:pressed {
+    -fx-background-color: #6d28d9;
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+    -fx-effect: dropshadow(gaussian, rgba(168, 85, 247, 0.8), 24, 0.6, 0, 0);
+}
+
+/* ============================================
+   SCREEN SHARE BUTTON - Teal
+   ============================================ */
+.call-btn-screen {
+    -fx-background-color: linear-gradient(to bottom, #14b8a6, #0d9488);
+    -fx-border-color: rgba(255, 255, 255, 0.2);
+    -fx-text-fill: white;
+    -fx-effect: dropshadow(gaussian, rgba(20, 184, 166, 0.4), 12, 0.3, 0, 4);
+}
+
+.call-btn-screen:hover {
+    -fx-background-color: linear-gradient(to bottom, #2dd4bf, #14b8a6);
+    -fx-effect: dropshadow(gaussian, rgba(20, 184, 166, 0.6), 18, 0.5, 0, 6);
+    -fx-scale-x: 1.08;
+    -fx-scale-y: 1.08;
+}
+
+.call-btn-screen:pressed {
+    -fx-background-color: #0f766e;
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+    -fx-effect: dropshadow(gaussian, rgba(20, 184, 166, 0.8), 24, 0.6, 0, 0);
+}
+
+/* ============================================
+   GENERAL HOVER/PRESSED FALLBACK
+   (for buttons without specific class)
+   ============================================ */
+.call-btn:hover {
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 16, 0.4, 0, 6);
+}
+
+.call-btn:pressed {
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
 }
