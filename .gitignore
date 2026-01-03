@@ -12,6 +12,8 @@ target/
 *.iws
 *.iml
 *.ipr
+*.db
+chat_history.db
 
 ### Eclipse ###
 .apt_generated
