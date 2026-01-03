@@ -143,7 +143,7 @@ public class MessageHandler {
              DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
              FileInputStream fis = new FileInputStream(file)) {
 
-            dos.writeUTF("FILEG");
+            dos.writeUTF("FILE");
             dos.writeUTF(selfName);
             dos.writeUTF(groupId);
             dos.writeUTF(file.getName());

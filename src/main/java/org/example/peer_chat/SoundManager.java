@@ -5,12 +5,8 @@ import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 
-/**
- * Manages sound notifications programmatically (beep, ringtone)
- * without external audio files.
- */
+
 public class SoundManager {
-    // Singleton or static usage
     private static SoundManager instance;
     private volatile boolean ringing = false;
     private Thread ringThread;
@@ -22,9 +18,7 @@ public class SoundManager {
         return instance;
     }
 
-    /**
-     * Play a short beep for new messages.
-     */
+   
     public void playMessageSound() {
         new Thread(() -> {
             try {
@@ -35,9 +29,7 @@ public class SoundManager {
         }, "sound-msg").start();
     }
 
-    /**
-     * Start a looping ringtone for incoming calls.
-     */
+   
     public synchronized void playIncomingCallSound() {
         if (ringing) return; // already ringing
         ringing = true;

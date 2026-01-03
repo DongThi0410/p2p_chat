@@ -1,18 +1,17 @@
 package org.example.peer_chat;
 
-import javafx.application.Application;
-import javafx.application.Platform;
-import javafx.scene.Scene;
-import javafx.scene.Parent;
-import javafx.stage.Stage;
-import javafx.fxml.FXMLLoader;
 import java.io.IOException;
 import java.net.URL;
 
-import org.example.peer_chat.ChatDb;
-import org.example.peer_chat.PeerHandle;
 import org.example.peer_chat.ui.controllers.LoginController;
 import org.example.peer_chat.ui.controllers.MainController;
+
+import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.stage.Stage;
 
 public class AppTestUI extends Application {
 

@@ -1,10 +1,16 @@
 package org.example.peer_chat;
 
-import javax.sound.sampled.*;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.DataLine;
+import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.SourceDataLine;
+import javax.sound.sampled.TargetDataLine;
 
 public class VoiceEngine {
     private final int localPort;
@@ -27,7 +33,6 @@ public class VoiceEngine {
 
     public void start(String remoteIp, int remotePort) {
         if (running) {
-            // Nếu đang chạy, dừng trước khi start lại
             stop();
         }
         

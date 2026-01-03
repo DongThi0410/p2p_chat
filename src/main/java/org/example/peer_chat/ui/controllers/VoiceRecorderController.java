@@ -23,32 +23,30 @@ import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
+import javafx.scene.control.TextArea;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+import org.example.peer_chat.ChatDb;
+import org.example.peer_chat.Message;
+import org.example.peer_chat.WhisperClient;
 
 public class VoiceRecorderController {
 
     @FXML private Text recordingStatus;
     @FXML private Text durationText;
     @FXML private Button cancelButton;
+    @FXML private Button transformToTextButton;
     @FXML private Button sendButton;
     @FXML private Circle micCircle;
     @FXML private Circle micHalo;
-
+    @FXML private TextArea messageReviewArea;
+    @FXML private Button sendTransformedButton;
     // Waveform bars
-    @FXML private Rectangle bar1;
-    @FXML private Rectangle bar2;
-    @FXML private Rectangle bar3;
-    @FXML private Rectangle bar4;
-    @FXML private Rectangle bar5;
-    @FXML private Rectangle bar6;
-    @FXML private Rectangle bar7;
-    @FXML private Rectangle bar8;
-    @FXML private Rectangle bar9;
-    @FXML private Rectangle bar10;
+    @FXML private Rectangle bar1, bar2, bar3, bar4, bar5, bar6, bar7, bar8, bar9, bar10;
+
 
     private boolean isRecording = false;
     private int duration = 0;
@@ -65,9 +63,11 @@ public class VoiceRecorderController {
     private VoiceMessageCallback callback;
     private String currentUser;
     private String selectedContact;
+    private ChatDb chatDb;
 
     public interface VoiceMessageCallback {
         void onVoiceSend(String filePath, int durationSeconds);
+        void onTextSend(String text);
     }
 
     public void init(String currentUser, String selectedContact, VoiceMessageCallback callback) {
@@ -198,6 +198,21 @@ public class VoiceRecorderController {
         waveformAnimation.play();
     }
 
+    private File saveTempAudioFile() throws IOException{
+        String fileName = "voice_temp_" + System.currentTimeMillis() + ".wav";
+        Path tempDir = Path.of(System.getProperty("java.io.tmpdir"), "peer_chat_voice");
+        Files.createDirectories(tempDir);
+
+        File tempFile = tempDir.resolve(fileName).toFile();
+        byte[] audioBytes = audioData.toByteArray();
+        ByteArrayInputStream bais = new ByteArrayInputStream(audioBytes);
+        AudioInputStream ais = new AudioInputStream(bais, audioFormat, audioBytes.length / audioFormat.getFrameSize());
+        AudioSystem.write(ais, AudioFileFormat.Type.WAVE, tempFile);
+
+        ais.close();
+        return tempFile;
+    }
+
     private void resetWaveform() {
         Rectangle[] bars = {bar1, bar2, bar3, bar4, bar5, bar6, bar7, bar8, bar9, bar10};
         double[] defaultHeights = {12, 20, 32, 18, 26, 16, 30, 22, 14, 24};
@@ -215,63 +230,63 @@ public class VoiceRecorderController {
     }
 
     @FXML
-    private void onCancelRecording() {
-        isRecording = false;
+    private void transformToText() {
+        if (audioData == null || audioData.size() == 0) return;
 
-        if (timer != null) timer.stop();
-        if (waveformAnimation != null) waveformAnimation.stop();
-        if (targetLine != null) {
-            targetLine.stop();
-            targetLine.close();
-        }
+        recordingStatus.setText("⏳ Đang chuyển giọng nói thành text...");
 
-        closeModal();
+        new Thread(()->{
+            try {
+                File audioFile = saveTempAudioFile();
+
+                WhisperClient client = new WhisperClient("http://localhost:8000");
+                String text = client.transcribe(audioFile);
+                String msg = text.replaceAll("^\\{\"text\":\"|\"\\}$", "");
+
+                Platform.runLater(() -> {
+                    messageReviewArea.setText(msg);
+                    recordingStatus.setText("✅ Chuyển xong, kiểm tra rồi gửi");
+                });
+
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }).start();
     }
 
     @FXML
     private void onSendRecording() {
-        if (isRecording) {
-            stopRecording();
-        }
-
-        if (audioData == null || audioData.size() == 0) {
-            recordingStatus.setText("❌ Chưa có bản ghi");
-            return;
-        }
-
-        // Lưu file WAV
+        if (audioData == null || audioData.size() == 0) return;
+        stopRecording();
         try {
-            String fileName = "voice_" + new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date()) + ".wav";
-            Path voiceDir = Path.of(System.getProperty("user.home"), "peer_chat_voices");
-            Files.createDirectories(voiceDir);
-
-            File outputFile = voiceDir.resolve(fileName).toFile();
-
-            byte[] audioBytes = audioData.toByteArray();
-            ByteArrayInputStream bais = new ByteArrayInputStream(audioBytes);
-            AudioInputStream audioInputStream = new AudioInputStream(bais, audioFormat, audioBytes.length / audioFormat.getFrameSize());
-
-            AudioSystem.write(audioInputStream, AudioFileFormat.Type.WAVE, outputFile);
-            audioInputStream.close();
-
-            System.out.println("[VoiceRecorder] Saved voice message: " + outputFile.getAbsolutePath());
-
-            // Gọi callback để gửi file
+            File audioFile = saveTempAudioFile();
             if (callback != null) {
-                Platform.runLater(() -> callback.onVoiceSend(outputFile.getAbsolutePath(), duration));
+                callback.onVoiceSend(audioFile.getAbsolutePath(), duration);
             }
-
             closeModal();
-
         } catch (IOException e) {
-            recordingStatus.setText("❌ Lỗi lưu file");
             e.printStackTrace();
+            recordingStatus.setText("❌ Lỗi gửi voice message");
         }
     }
 
     @FXML
+    private void sendTransformedTextMessage() {
+        String textToSend = messageReviewArea.getText();
+        if (textToSend == null || textToSend.trim().isEmpty()) return;
+
+        messageReviewArea.clear();
+        if (callback != null) {
+            callback.onTextSend(textToSend);
+        }
+        closeModal();
+    }
+
+    @FXML
     private void onClose() {
-        onCancelRecording();
+        transformToText();
     }
 
     private void closeModal() {

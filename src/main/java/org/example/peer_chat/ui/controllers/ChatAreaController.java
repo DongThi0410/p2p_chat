@@ -9,6 +9,9 @@ import java.util.List;
 
 import javax.sound.sampled.LineUnavailableException;
 
+import javafx.geometry.Insets;
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
 import org.example.peer_chat.CallRecord;
 import org.example.peer_chat.ChatDb;
 import org.example.peer_chat.ChatItem;
@@ -38,14 +41,6 @@ public class ChatAreaController {
     private TextField messageField;
     @FXML
     private VBox messagesBox;
-    @FXML
-    private Button sendButton;
-    @FXML
-    private Button voiceButton;
-    @FXML
-    private Button attachButton;
-    @FXML
-    private Button imageButton;
     @FXML
     private Label contactName;
     @FXML
@@ -88,6 +83,25 @@ public class ChatAreaController {
     private Stage activeVideoCallStage;
     private VideoCallModalController activeVideoCallController;
     private boolean isCurrentCallVideo = false; // Track loại call hiện tại
+    private void updateGroupActionButtons(boolean isGroup, boolean isOwner) {
+
+        // Rename + Manage Members: chỉ owner mới thấy
+        if (renameButton != null) {
+            renameButton.setVisible(isGroup && isOwner);
+            renameButton.setManaged(isGroup && isOwner);
+        }
+
+        if (manageMembersButton != null) {
+            manageMembersButton.setVisible(isGroup && isOwner);
+            manageMembersButton.setManaged(isGroup && isOwner);
+        }
+
+        // Leave: mọi member đều thấy khi là group
+        if (leaveButton != null) {
+            leaveButton.setVisible(isGroup);
+            leaveButton.setManaged(isGroup);
+        }
+    }
 
     public void setCurrentCallVideo(boolean isVideo) {
         this.isCurrentCallVideo = isVideo;
@@ -115,19 +129,16 @@ public class ChatAreaController {
         this.currentGroupName = null;
         this.chatDb = chatDb;
 
-        // Khi đã chọn một contact: ẩn placeholder, hiện khu vực chat chính
-        if (chatRootPane != null) {
-            chatRootPane.setVisible(true);
-            chatRootPane.setManaged(true);
-        }
-        if (placeholderRoot != null) {
-            placeholderRoot.setVisible(false);
-            placeholderRoot.setManaged(false);
-        }
+        chatRootPane.setVisible(true);
+        chatRootPane.setManaged(true);
+        placeholderRoot.setVisible(false);
+        placeholderRoot.setManaged(false);
 
         contactName.setText(selectedContact);
         contactStatus.setText("Online");
         contactAvatar.setText("🐱");
+
+        updateGroupActionButtons(false, false);
 
         loadMessages();
     }
@@ -161,18 +172,8 @@ public class ChatAreaController {
             String owner = chatDb.getGroupOwner(currentGroupId);
             isOwner = currentUser.equals(owner);
         }
-        if (renameButton != null) {
-            renameButton.setVisible(isOwner);
-            renameButton.setManaged(isOwner);
-        }
-        if (manageMembersButton != null) {
-            manageMembersButton.setVisible(isOwner);
-            manageMembersButton.setManaged(isOwner);
-        }
-        if (leaveButton != null) {
-            leaveButton.setVisible(true);
-            leaveButton.setManaged(true);
-        }
+        updateGroupActionButtons(true, isOwner);
+
 
         messagesBox.getChildren().clear();
         if (chatDb != null) {
@@ -407,7 +408,6 @@ public class ChatAreaController {
         messagesBox.getChildren().add(row);
         scrollToBottom();
     }
-
     private void appendMessage(Message msg) {
         boolean isSent = msg.getFromUser().equals(currentUser);
         appendPlainTextBubble(msg.getFromUser(), msg.getContent(), isSent);
@@ -492,10 +492,33 @@ public class ChatAreaController {
             Parent root = loader.load();
 
             VoiceRecorderController controller = loader.getController();
-            controller.init(currentUser, selectedContact, (filePath, durationSeconds) -> {
-                // Callback khi voice message được gửi
-                sendVoiceMessage(filePath, durationSeconds);
+            controller.init(currentUser, selectedContact, new VoiceRecorderController.VoiceMessageCallback() {
+                @Override
+                public void onVoiceSend(String filePath, int durationSeconds) {
+
+                    Platform.runLater(() -> appendVoiceBubble(currentUser, filePath, durationSeconds)
+                    );
+                    sendVoiceMessage(filePath, durationSeconds);
+
+                }
+
+                @Override
+                public void onTextSend(String text) {
+                    // Lưu text vào DB
+                    Message textMsg = new Message(currentUser, selectedContact, text, false, null);
+                    textMsg.setTimestamp(System.currentTimeMillis());
+                    chatDb.insertMessage(textMsg);
+
+                    // Hiển thị local
+                    Platform.runLater(() -> appendMessage(textMsg));
+
+                    // Gửi P2P
+                    if (peer != null) {
+                        peer.sendToByName(selectedContact, text);
+                    }
+                }
             });
+
 
             Stage stage = new Stage();
             stage.initModality(Modality.APPLICATION_MODAL);
@@ -625,22 +648,25 @@ public class ChatAreaController {
                 return;
         }
 
+        appendVoiceBubble(sender, absolutePath, durationSeconds);
+
+    }
+
+
+    private void appendVoiceBubble(String sender, String filePath, int durationSeconds) {
         boolean isSent = sender.equals(currentUser);
 
-        // Tạo voice bubble container
         VBox voiceBubble = new VBox(8);
         voiceBubble.getStyleClass().add(isSent ? "voice-bubble-sent" : "voice-bubble-received");
 
-        // Icon loa + waveform
         HBox waveformRow = new HBox(8);
         waveformRow.setAlignment(Pos.CENTER_LEFT);
 
         Label playIcon = new Label("▶️");
         playIcon.getStyleClass().add("voice-play-icon");
         playIcon.setCursor(javafx.scene.Cursor.HAND);
-        playIcon.setOnMouseClicked(e -> playVoiceMessage(absolutePath, playIcon));
+        playIcon.setOnMouseClicked(e -> playVoiceMessage(filePath, playIcon));
 
-        // Waveform visual
         HBox waveform = new HBox(2);
         waveform.setAlignment(Pos.CENTER);
         for (int i = 0; i < 20; i++) {
@@ -653,7 +679,6 @@ public class ChatAreaController {
 
         waveformRow.getChildren().addAll(playIcon, waveform);
 
-        // Duration
         int mins = durationSeconds / 60;
         int secs = durationSeconds % 60;
         Label durationLabel = new Label(String.format("%02d:%02d", mins, secs));
@@ -661,13 +686,16 @@ public class ChatAreaController {
 
         voiceBubble.getChildren().addAll(waveformRow, durationLabel);
 
-        // Wrap trong HBox để căn lề
         HBox row = new HBox(voiceBubble);
         row.setAlignment(isSent ? Pos.CENTER_RIGHT : Pos.CENTER_LEFT);
         row.getStyleClass().add("chat-row");
-        messagesBox.getChildren().add(row);
-        scrollToBottom();
+
+        Platform.runLater(() -> {
+            messagesBox.getChildren().add(row);
+            scrollToBottom();
+        });
     }
+
 
     private void playVoiceMessage(String filePath, Label playIcon) {
         new Thread(() -> {
@@ -1298,11 +1326,7 @@ public class ChatAreaController {
         }
     }
 
-    /**
-     * Được gọi từ MainController khi call được accept (nhận CALL_ACCEPT).
-     * Cập nhật UI từ "Đang gọi..." sang "Đang trong cuộc gọi" với timer.
-     * Kiểm tra loại call (voice/video) để hiển thị UI phù hợp.
-     */
+
     public void onCallAccepted(String peerName) {
         // Kiểm tra nếu đang có video call window mở
         if (activeVideoCallController != null && activeVideoCallStage != null && activeVideoCallStage.isShowing()) {
