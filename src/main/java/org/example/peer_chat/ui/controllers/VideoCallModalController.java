@@ -1,31 +1,33 @@
 package org.example.peer_chat.ui.controllers;
 
-import javafx.fxml.FXML;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.text.Text;
-import javafx.scene.image.ImageView;
-import javafx.scene.image.Image;
-import javafx.scene.image.WritableImage;
-import javafx.scene.image.PixelWriter;
-import javafx.scene.paint.Color;
-import javafx.animation.KeyFrame;
-import javafx.animation.Timeline;
-import javafx.util.Duration;
-import javafx.stage.Stage;
-import javafx.application.Platform;
-import org.example.peer_chat.PeerHandle;
-import org.example.peer_chat.VideoEngine;
-import com.github.sarxos.webcam.Webcam;
-import com.github.sarxos.webcam.WebcamException;
-
-import javax.sound.sampled.LineUnavailableException;
-import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.SocketException;
+
+import javax.imageio.ImageIO;
+import javax.sound.sampled.LineUnavailableException;
+
+import org.example.peer_chat.PeerHandle;
+import org.example.peer_chat.VideoEngine;
+
+import com.github.sarxos.webcam.Webcam;
+import com.github.sarxos.webcam.WebcamException;
+
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.application.Platform;
+import javafx.fxml.FXML;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.image.PixelWriter;
+import javafx.scene.image.WritableImage;
+import javafx.scene.text.Text;
+import javafx.stage.Stage;
+import javafx.util.Duration;
 
 public class VideoCallModalController {
 
@@ -489,7 +491,11 @@ public class VideoCallModalController {
 
     @FXML
     private void onRejectCall() {
-        // Hiện tại chưa có signaling CALL_REJECT, chỉ cần đóng cửa sổ.
+        // Gửi CALL_REJECT để đối phương biết và đóng cửa sổ gọi
+        if (peerHandle != null && remoteName != null) {
+            peerHandle.rejectCall(remoteName);
+        }
+
         if (callDurationTimer != null) {
             callDurationTimer.stop();
         }
